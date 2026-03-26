@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Dashboard — PMReady</title>
+  <meta name="description" content="Your PMReady dashboard — weekly mission, readiness signal, and progress.">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .dashboard-page { padding: var(--space-8) 0 var(--space-20); }
+    .greeting-bar {
+      display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;
+      gap: var(--space-4); margin-bottom: var(--space-8);
+    }
+    .archetype-chip {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3);
+      border-radius: var(--radius-full); font-size: 0.85rem; font-weight: 600; color: var(--purple-400);
+      margin-bottom: var(--space-3);
+    }
+    /* Completion checkmark overlay */
+    .mission-item.done { opacity: 0.5; }
+    .mission-item.done .mi-icon { background: rgba(16,185,129,0.15); }
+    .concept-box {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: var(--space-5); margin-top: var(--space-4);
+    }
+    .concept-box h4 { margin-bottom: var(--space-3); }
+    .concept-box p  { font-size: 0.9rem; line-height: 1.7; }
+    .action-box {
+      background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.15);
+      border-radius: var(--radius-md); padding: var(--space-4) var(--space-5); margin-top: var(--space-4);
+    }
+    .action-box .label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--purple-400); margin-bottom: var(--space-2); display: block; }
+    .action-textarea {
+      width: 100%; min-height: 120px; padding: var(--space-3); margin-top: var(--space-3);
+      background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: var(--radius-md);
+      color: var(--text-primary); font-family: var(--font-body); font-size: 0.9rem;
+      resize: vertical; outline: none;
+    }
+    .action-textarea:focus { border-color: var(--purple-500); }
+    .company-list { display: flex; flex-direction: column; gap: var(--space-2); }
+    .company-item {
+      display: flex; align-items: center; gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: var(--radius-md);
+      font-size: 0.85rem;
+    }
+    .company-item span:first-child { font-size: 1rem; }
+    .stat-mini { text-align: center; padding: var(--space-4) 0; }
+    .stat-mini .val { font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; color: var(--purple-400); }
+    .stat-mini .lbl { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .stat-row { display: flex; gap: 0; }
+    .stat-row .stat-mini { flex: 1; border-right: 1px solid var(--border); }
+    .stat-row .stat-mini:last-child { border-right: none; }
+    .progress-week {
+      display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4);
+    }
+    .week-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--border); flex-shrink: 0;
+    }
+    .week-dot.done { background: var(--green-500); }
+    .week-dot.current { background: var(--purple-500); box-shadow: 0 0 8px var(--purple-glow); }
+    .no-state { text-align: center; padding: var(--space-16); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">PM<span>Ready</span></a>
+      <a href="simulate.html" class="btn btn-primary btn-sm" id="start-sim-nav">Start Simulation →</a>
+    </div>
+  </nav>
+
+  <main class="dashboard-page" id="dashboard-main">
+    <div class="container">
+      <div class="no-state" id="no-state-msg" style="display:none;">
+        <h2>No journey found</h2>
+        <p>Take the assessment first to get your personalised dashboard.</p>
+        <a href="detect.html" class="btn btn-primary" style="margin-top:var(--space-6);">Start Assessment →</a>
+      </div>
+      <div id="dashboard-content" style="display:none;"></div>
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script type="module">
+    const state = await loadState();
+
+    if (!state.archetype) {
+      document.getElementById('no-state-msg').style.display = 'block';
+    } else {
+      document.getElementById('dashboard-content').style.display = 'block';
+      renderDashboard();
+    }
+
+    window.renderDashboard = function() {
+      const archetype = ARCHETYPES[state.archetype] || ARCHETYPES['growth_pm'];
+      const mission = MISSIONS[state.archetype] || MISSIONS['growth_pm'];
+      const readiness = computeReadiness(state);
+      const rs = READINESS_STATES[readiness];
+      const bg = BACKGROUNDS[state.background] || BACKGROUNDS['engineer'];
+      const simCount = state.simCompleted || 0;
+      const weekNum = state.weekNumber || 1;
+      const casesDone = state.completedCases || [];
+
+      saveState({ readinessState: readiness });
+
+      const archetype_companies = archetype.targetCompanies.split(', ').slice(0, 5);
+
+      document.getElementById('dashboard-content').innerHTML = `
+        <!-- Greeting -->
+        <div class="greeting-bar">
+          <div>
+            <div class="archetype-chip">${archetype.emoji} ${archetype.name}</div>
+            <h1 style="font-size:1.75rem; margin-bottom:var(--space-2);">Your Week ${weekNum} Mission</h1>
+            <p style="font-size:0.9rem; color:var(--text-muted);">One case · One concept · One action · ~40 minutes</p>
+          </div>
+          <div class="readiness-signal ${rs.className}" style="align-self:flex-start;" role="status" aria-live="polite">
+            ${rs.label}
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- LEFT: Mission -->
+          <div>
+
+            <!-- Mission Card -->
+            <div class="mission-card" role="main" aria-label="This week's mission">
+              <div class="mission-header">
+                <div class="mission-title">📋 This Week's Mission</div>
+                <div class="mission-name">${mission.title}</div>
+                ${mission.case.leadsWithStrength ? `<p style="font-size:0.8rem; margin-top:var(--space-2); color:var(--green-400);">✓ ${mission.case.strengthNote}</p>` : ''}
+              </div>
+
+              <div class="mission-items">
+                <!-- Case Item -->
+                <a href="simulate.html?case=${mission.case.id}" class="mission-item ${casesDone.includes(mission.case.id) ? 'done' : ''}" id="case-item">
+                  <div class="mi-icon">${mission.case.icon}</div>
+                  <div style="flex:1;">
+                    <div class="mi-label">Case Simulation · ${mission.case.format}</div>
+                    <div class="mi-title">${mission.case.title}</div>
+                    <div class="mi-time">⏱ ${mission.case.duration} &nbsp;·&nbsp; ${mission.case.company}</div>
+                  </div>
+                  <div style="color:${casesDone.includes(mission.case.id) ? 'var(--green-400)' : 'var(--text-muted)'}; font-size:1.2rem;">
+                    ${casesDone.includes(mission.case.id) ? '✓' : '→'}
+                  </div>
+                </a>
+
+                <!-- Concept -->
+                <div class="mission-item" id="concept-item" style="cursor:default;">
+                  <div class="mi-icon">${mission.concept.icon}</div>
+                  <div style="flex:1;">
+                    <div class="mi-label">Concept Close</div>
+                    <div class="mi-title">${mission.concept.title}</div>
+                    <div class="mi-time">⏱ ${mission.concept.duration}</div>
+                  </div>
+                </div>
+
+                <!-- Action -->
+                <div class="mission-item" id="action-item" style="cursor:default;">
+                  <div class="mi-icon">${mission.action.icon}</div>
+                  <div style="flex:1;">
+                    <div class="mi-label">Application Action</div>
+                    <div class="mi-title">${mission.action.title}</div>
+                    <div class="mi-time">⏱ ${mission.action.duration}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mission-footer">
+                <a href="simulate.html?case=${mission.case.id}" class="btn btn-primary w-full" style="justify-content:center;" id="start-mission-btn">
+                  ${casesDone.includes(mission.case.id) ? 'Review Simulation Again' : 'Start This Week\'s Case →'}
+                </a>
+              </div>
+            </div>
+
+            <!-- Concept Close Expanded -->
+            <div class="concept-box" id="concept-expanded">
+              <h4>📖 Concept Close: ${mission.concept.title}</h4>
+              ${(() => {
+                const cards = CONCEPT_CARDS[archetype.id];
+                const card = cards && cards.find(c => c.title === mission.concept.title);
+                if (card && card.body) {
+                  return `<div class="concept-body" style="white-space:pre-line; font-size:0.88rem; line-height:1.8; color:var(--text-secondary);">${card.body.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-primary);">$1</strong>')}</div>`;
+                }
+                return `<p>${mission.concept.summary}</p>`;
+              })()}
+            </div>
+
+            <!-- Application Action -->
+            <div class="action-box" id="action-expanded">
+              <span class="label">✍️ Application Action — ${mission.action.duration}</span>
+              <p style="font-size:0.9rem; color:var(--text-secondary);">${mission.action.prompt}</p>
+              <textarea
+                class="action-textarea"
+                placeholder="Write your answer here… it's saved automatically."
+                id="action-response"
+                aria-label="Your application action response"
+              >${state.actionResponse || ''}</textarea>
+              <button class="btn btn-secondary btn-sm" style="margin-top:var(--space-3);" onclick="saveActionResponse()" id="save-action-btn">
+                Save Response
+              </button>
+              <span id="save-confirm" style="font-size:0.8rem; color:var(--green-400); margin-left:var(--space-3); display:none;">✓ Saved</span>
+            </div>
+
+            <!-- Data Mission Link -->
+            <div class="mission-item" style="margin-top:var(--space-3); border-color:rgba(6,182,212,0.2); background:rgba(6,182,212,0.04); cursor:pointer;" onclick="window.location.href='analytics.html'" role="button" tabindex="0" aria-label="Start Data Mission" onkeydown="if(event.key==='Enter') window.location.href='analytics.html'">
+              <div class="mi-icon">🔢</div>
+              <div style="flex:1;">
+                <div class="mi-label" style="color:var(--cyan-500);">🆕 Data Mission · Week 2+</div>
+                <div class="mi-title">Swiggy Instamart DAU Drop — Diagnose with Data</div>
+                <div class="mi-time">⏱ 10–15 min &nbsp;·&nbsp; Pick the right queries, not all queries</div>
+              </div>
+              <div style="color:var(--cyan-500); font-size:1.2rem;">→</div>
+            </div>
+
+          </div>
+
+
+          <!-- RIGHT: Sidebar -->
+          <div>
+
+            <!-- Readiness Signal -->
+            <div class="sidebar-card" role="region" aria-label="Readiness signal">
+              <h4>Readiness Signal</h4>
+              <div class="readiness-signal ${rs.className} w-full" style="justify-content:center; font-size:1rem; padding:var(--space-3); margin-bottom:var(--space-4);">
+                ${rs.label}
+              </div>
+              <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:var(--space-3);">${rs.message} ${rs.subMessage}</p>
+              ${rs.ctaText ? `<a href="simulate.html" class="btn btn-primary w-full" style="justify-content:center;">${rs.ctaText}</a>` : `<p style="font-size:0.8rem; color:var(--text-muted);">Complete simulations to advance your readiness state.</p>`}
+            </div>
+
+            <!-- Stats -->
+            <div class="sidebar-card" style="margin-top:var(--space-4);" role="region" aria-label="Your progress stats">
+              <h4>Your Progress</h4>
+              <div class="stat-row">
+                <div class="stat-mini">
+                  <div class="val">${simCount}</div>
+                  <div class="lbl">Simulations</div>
+                </div>
+                <div class="stat-mini">
+                  <div class="val">${weekNum}</div>
+                  <div class="lbl">Week</div>
+                </div>
+                <div class="stat-mini">
+                  <div class="val">${state.avgScore || 0}%</div>
+                  <div class="lbl">Avg Score</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Target Companies -->
+            <div class="sidebar-card" style="margin-top:var(--space-4);" role="region" aria-label="Target companies">
+              <h4>Your Target Companies</h4>
+              <div class="company-list">
+                ${archetype_companies.map(c => `
+                  <div class="company-item">
+                    <span>🏢</span>
+                    <span>${c}</span>
+                  </div>
+                `).join('')}
+              </div>
+              <p style="font-size:0.75rem; color:var(--text-muted); margin-top:var(--space-3);">${archetype.companyType}</p>
+            </div>
+
+            <!-- Anti-metrics reminder -->
+            <div class="sidebar-card" style="margin-top:var(--space-4); background:rgba(239,68,68,0.05); border-color:rgba(239,68,68,0.15);">
+              <h4 style="color:#FCA5A5;">Design Principles</h4>
+              <p style="font-size:0.8rem; line-height:1.6; color:var(--text-secondary);">No streaks. No daily goals. No percentage scores. Your readiness is measured by <strong style="color:var(--text-primary);">simulation performance</strong> — not modules completed.</p>
+            </div>
+
+            <!-- Retake or Reset -->
+            <div style="margin-top:var(--space-4); text-align:center;">
+              <button class="btn btn-ghost btn-sm" onclick="confirmReset()">Retake Assessment</button>
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    window.saveActionResponse = async function() {
+      const val = document.getElementById('action-response').value;
+      await saveState({ actionResponse: val });
+      const confirm = document.getElementById('save-confirm');
+      confirm.style.display = 'inline';
+      setTimeout(() => { confirm.style.display = 'none'; }, 2000);
+    }
+
+    window.confirmReset = async function() {
+      if (confirm('This will clear your current progress and restart the assessment. Continue?')) {
+        await clearState();
+        window.location.href = 'detect.html';
+      }
+    }
+
+    // Auto-save action response on input
+    document.addEventListener('input', (e) => {
+      if (e.target.id === 'action-response') {
+        clearTimeout(window._saveTimer);
+        window._saveTimer = setTimeout(() => {
+          saveState({ actionResponse: e.target.value });
+        }, 1000);
+      }
+    });
+  </script>
+</body>
+</html>

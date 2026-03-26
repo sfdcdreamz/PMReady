@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation — PMReady</title>
+  <meta name="description" content="PM case simulation — no AI zone. India-contextualised cases in conditions that mirror real interviews.">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .sim-meta {
+      display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center;
+      margin-bottom: var(--space-5);
+    }
+    .case-meta-tag {
+      font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+      padding: 2px var(--space-3);
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+    }
+    .framework-tip {
+      background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.15);
+      border-radius: var(--radius-md); padding: var(--space-4) var(--space-5);
+      margin-bottom: var(--space-5);
+    }
+    .framework-tip h4 { font-size: 0.8rem; color: var(--cyan-500); margin-bottom: var(--space-2); }
+    .framework-tip p  { font-size: 0.85rem; color: var(--text-secondary); }
+    .sim-footer {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+      gap: var(--space-4); margin-top: var(--space-6);
+    }
+    .char-count { font-size: 0.8rem; color: var(--text-muted); }
+    .case-select-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: var(--space-4); margin-top: var(--space-6);
+    }
+    .case-select-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: var(--space-5);
+      cursor: pointer; transition: all 0.2s; text-decoration: none; display: block;
+    }
+    .case-select-card:hover { border-color: var(--border-accent); transform: translateY(-2px); }
+    .case-format-badge {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--purple-400); margin-bottom: var(--space-3); display: block;
+    }
+    .no-ai-zone-banner {
+      display: flex; align-items: center; gap: var(--space-3);
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+      font-size: 0.875rem; margin-bottom: var(--space-5);
+    }
+  </style>
+</head>
+<body>
+  <!-- SIM HEADER -->
+  <header class="sim-header" role="banner">
+    <div class="container sim-header-inner">
+      <a href="index.html" style="font-family:var(--font-display); font-weight:700; font-size:1rem; background:linear-gradient(135deg,var(--purple-400),var(--cyan-500)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">PMReady</a>
+      <div class="sim-badge" id="no-ai-badge" aria-label="No AI assistance allowed">
+        🚫 No-AI Zone — Interview Mode
+      </div>
+      <div class="timer-display" id="timer" aria-live="polite" aria-label="Time remaining">15:00</div>
+    </div>
+  </header>
+
+  <!-- SELECT VIEW (shown when no case param) -->
+  <div id="select-view" style="display:none;">
+    <div class="sim-body">
+      <div class="container-narrow">
+        <div style="margin-bottom:var(--space-8);">
+          <span style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--purple-400); display:block; margin-bottom:var(--space-3);">Choose Your Simulation</span>
+          <h1 style="font-size:1.75rem; margin-bottom:var(--space-2);">Select a Case</h1>
+          <p style="color:var(--text-secondary);">Each case is tagged to your archetype. Start with Format A or B — Format C comes in Week 3.</p>
+        </div>
+        <div class="case-select-grid" id="case-select-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVE SIMULATION VIEW -->
+  <div id="sim-view" style="display:none;">
+    <div class="sim-body">
+      <div class="container-narrow">
+
+        <!-- No AI banner -->
+        <div class="no-ai-zone-banner" role="alert">
+          <span style="font-size:1.2rem;">🚫</span>
+          <p>This is your interview mode. GCCs and mid-size PM interviews don't allow Google, AI, or notes. Practise the muscle you need for that moment.</p>
+        </div>
+
+        <!-- Case Prompt -->
+        <div class="case-prompt" role="region" aria-label="Case scenario">
+          <div class="sim-meta" id="sim-meta"></div>
+          <div class="case-scenario" id="case-scenario"></div>
+        </div>
+
+        <!-- Framework Tip -->
+        <div class="framework-tip" id="framework-tip">
+          <h4>💡 Structure Suggestion</h4>
+          <p id="framework-text"></p>
+        </div>
+
+        <!-- Response Area -->
+        <div class="response-area" role="region" aria-label="Your response">
+          <textarea
+            id="response-textarea"
+            placeholder="Start writing your answer here… Think out loud. Structure your thinking. Auto-saved every 60 seconds."
+            aria-label="Your case response"
+          ></textarea>
+          <div class="response-hint">
+            <span id="autosave-status">Auto-save: ON</span>
+            <span class="char-count" id="char-count">0 characters</span>
+          </div>
+        </div>
+
+        <div class="sim-footer">
+          <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+          <button class="btn btn-primary" id="submit-btn" onclick="submitSimulation()" aria-label="Submit simulation and get feedback">
+            Submit & Get Feedback →
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script type="module">
+    // ── Init & Render ─────────────────────────────────────────
+    const state = await loadState();
+    let activeCase = null;
+    let secondsRemaining = 0;
+    let timerInterval;
+
+    const queryParams = new URLSearchParams(window.location.search);
+    const caseId = queryParams.get('case');
+
+    if (caseId && CASES[caseId]) {
+      // Direct case view
+      activeCase = CASES[caseId];
+      if (PAYWALL_CONFIG.enabled && activeCase.week && !PAYWALL_CONFIG.freeWeeks.includes(activeCase.week) && !state.isMember) {
+        showCaseSelector();
+        showPaywall();
+      } else {
+        startSimulation(activeCase);
+      }
+    } else {
+      showCaseSelector();
+    }
+
+    // ── Case Selector ─────────────────────────────────────
+    function showCaseSelector() {
+      if (!state.archetype) {
+        window.location.href = 'detect.html';
+        return;
+      }
+      document.getElementById('select-view').style.display = 'block';
+      document.getElementById('no-ai-badge').style.display = 'none';
+      document.getElementById('timer').style.display = 'none';
+      const archetype = state.archetype || 'growth_pm';
+      const grid = document.getElementById('case-select-grid');
+      const caseList = Object.values(CASES);
+      const relevant = caseList.filter(c => c.targetArchetypes.includes(archetype));
+      const others   = caseList.filter(c => !c.targetArchetypes.includes(archetype));
+      const sorted   = [...relevant, ...others];
+      grid.innerHTML = sorted.map(c => {
+        const isDone = (state.completedCases || []).includes(c.id);
+        const isRecommended = c.targetArchetypes.includes(archetype);
+        const isLocked = PAYWALL_CONFIG.enabled && c.week && !PAYWALL_CONFIG.freeWeeks.includes(c.week) && !state.isMember;
+        return `
+          <a href="${isLocked ? '#' : 'simulate.html?case=' + c.id}"
+             class="case-select-card${isLocked ? ' locked-card' : ''}"
+             aria-label="${isLocked ? 'Locked: ' : 'Start: '}${c.title}"
+             ${isLocked ? 'onclick="showPaywall(event)"' : ''}>
+            <span class="case-format-badge">
+              ${isLocked ? '🔒 Founding Member · ' : isRecommended ? '⭐ Recommended · ' : ''}
+              ${c.format === 'format_a' ? 'Format A — Product Diagnosis' : 'Format B — Build or Kill'}
+              ${c.week ? ` · Week ${c.week}` : ''}
+            </span>
+            <h3 style="font-size:1rem; margin-bottom:var(--space-2);">${c.title}</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:var(--space-3);">${c.company} · ⏱ 15 min · ${c.difficulty}</p>
+            <div style="display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-3);">
+              ${c.primarySkills.map(s => `<span class="badge badge-purple" style="font-size:0.65rem;">${s.replace(/_/g,' ')}</span>`).join('')}
+            </div>
+            ${isDone ? `<span class="badge badge-green">✓ Completed</span>` : isLocked ? `<span class="badge badge-purple" style="opacity:0.7;">🔒 Week 3 — Founding Member</span>` : `<span class="badge badge-blue">Start →</span>`}
+          </a>`;
+      }).join('');
+    }
+
+    // ── Paywall ───────────────────────────────────────────
+    window.showPaywall = function(e) {
+      if (e) e.preventDefault();
+      document.getElementById('paywall-modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    window.closePaywall = function() {
+      document.getElementById('paywall-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closePaywall(); });
+
+    // ── Simulation ────────────────────────────────────────
+    window.startSimulation = function(cas) {
+      if (PAYWALL_CONFIG.enabled && cas.week && !PAYWALL_CONFIG.freeWeeks.includes(cas.week) && !state.isMember) {
+        showPaywall(null); showCaseSelector(); return;
+      }
+      document.getElementById('sim-view').style.display = 'block';
+      secondsRemaining = cas.duration;
+      const formatLabel = cas.format === 'format_a' ? 'Format A — Product Diagnosis' : 'Format B — Build or Kill';
+      document.getElementById('sim-meta').innerHTML = `
+        <span class="case-meta-tag">🏢 ${cas.company}</span>
+        <span class="case-meta-tag">${formatLabel}</span>
+        <span class="case-meta-tag">⏱ ${Math.round(cas.duration/60)} min</span>
+        <span class="case-meta-tag">Difficulty: ${cas.difficulty}</span>`;
+      document.getElementById('case-scenario').innerHTML = cas.scenario.replace(/\n/g, '<br>');
+      const tips = {
+        format_a: 'Structure your answer in 3 parts: (1) Your top 2–3 ranked hypotheses — state them before any analysis. (2) The specific data you\'d look at to test each hypothesis. (3) Your first recommendation for hour 1.',
+        format_b: 'Structure your answer in 3 parts: (1) Your decision recommendation upfront — take a position. (2) Your reasoning (trade-offs considered). (3) How you\'d communicate this differently for each stakeholder.'
+      };
+      document.getElementById('framework-text').textContent = tips[cas.format] || tips['format_a'];
+      document.getElementById('response-textarea').value = state[`response_${cas.id}`] || '';
+      updateCharCount();
+      startTimer();
+    }
+
+    // ── Timer ─────────────────────────────────────────────
+    function startTimer() {
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        secondsRemaining--;
+        updateTimerDisplay();
+        if (secondsRemaining <= 0) { clearInterval(timerInterval); autoSubmit(); }
+      }, 1000);
+    }
+    function updateTimerDisplay() {
+      const el = document.getElementById('timer');
+      const m = Math.floor(secondsRemaining/60), s = secondsRemaining%60;
+      el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      el.className = 'timer-display';
+      if (secondsRemaining<=300 && secondsRemaining>120) el.classList.add('warning');
+      if (secondsRemaining<=120) el.classList.add('danger');
+    }
+    function autoSubmit() {
+      document.getElementById('timer').textContent = '⏰ Time!';
+      document.getElementById('timer').classList.add('danger');
+      document.getElementById('submit-btn').textContent = 'Time\'s Up — Get Feedback →';
+      submitSimulation();
+    }
+
+    // ── Char count & auto-save ────────────────────────────
+    function updateCharCount() {
+      const txt = document.getElementById('response-textarea');
+      if (txt) document.getElementById('char-count').textContent = `${txt.value.length} characters`;
+    }
+    let autoSaveTimer;
+    document.addEventListener('input', (e) => {
+      if (e.target.id === 'response-textarea') {
+        updateCharCount();
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+          if (activeCase) {
+            saveState({ [`response_${activeCase.id}`]: e.target.value });
+            document.getElementById('autosave-status').textContent = '✓ Auto-saved';
+            setTimeout(() => { const el=document.getElementById('autosave-status'); if(el) el.textContent='Auto-save: ON'; }, 1500);
+          }
+        }, 1000);
+      }
+    });
+
+    // ── Submit — 5-dim rubric scorer ──────────────────────
+    window.submitSimulation = async function() {
+      if (!activeCase) return;
+      clearInterval(timerInterval);
+      const response = document.getElementById('response-textarea').value.trim();
+      const wordCount = response.split(/\s+/).filter(Boolean).length;
+      const rubricResult = computeRubricScore(response, activeCase);
+      const score = rubricResult.total;
+      const prevCompleted = state.completedCases || [];
+      const newCompleted = [...new Set([...prevCompleted, activeCase.id])];
+      const prevScores = state.allScores || [];
+      prevScores.push(score);
+      const avgScore = Math.round(prevScores.reduce((a,b)=>a+b,0)/prevScores.length);
+      const simCompleted = (state.simCompleted||0)+1;
+      
+      await saveState({
+        [`response_${activeCase.id}`]: response,
+        [`rubric_${activeCase.id}`]: rubricResult.dimensions,
+        lastCaseId: activeCase.id, lastScore: score, lastWordCount: wordCount,
+        completedCases: newCompleted, simCompleted, avgScore, allScores: prevScores,
+      });
+      sessionStorage.setItem('lastScore', score);
+      sessionStorage.setItem('lastCaseId', activeCase.id);
+      sessionStorage.setItem('feedbackResponse', response);
+      sessionStorage.setItem('rubricDimensions', JSON.stringify(rubricResult.dimensions));
+      window.location.href = 'feedback.html';
+    }
+  </script>
+
+  <!-- ── Paywall Modal ─────────────────────────────────── -->
+  <div id="paywall-modal" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.82);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity 0.25s;">
+    <div style="background:var(--bg-card);border:1px solid var(--border-accent);border-radius:var(--radius-xl);width:100%;max-width:480px;padding:2.5rem;box-shadow:0 24px 64px rgba(0,0,0,0.6),0 0 40px var(--purple-glow);position:relative;">
+      <button onclick="closePaywall()" style="position:absolute;top:1.25rem;right:1.25rem;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;cursor:pointer;color:var(--text-muted);font-size:1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+      <div style="font-size:2rem;margin-bottom:1rem;">🔒</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.25);border-radius:999px;font-size:0.75rem;font-weight:700;color:var(--purple-400);margin-bottom:1rem;">Week 3 — Founding Member</div>
+      <h2 style="font-size:1.4rem;margin-bottom:0.75rem;">You've unlocked 2 free simulations.</h2>
+      <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">Week 3 cases + advanced formats are for founding members. Lock in lifetime access at the founding price before it goes to ₹9,999.</p>
+      <div style="display:grid;gap:0.75rem;margin-bottom:1.5rem;">
+        <div style="background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(6,182,212,0.08));border:1px solid var(--border-accent);border-radius:var(--radius-lg);padding:1.25rem;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+            <div><div style="font-weight:700;font-size:1.05rem;">Founding Member</div><div style="font-size:0.8rem;color:var(--text-muted);">Lifetime access — pay once</div></div>
+            <div style="text-align:right;"><div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,var(--purple-400),var(--cyan-500));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">₹1,999</div><div style="font-size:0.75rem;color:var(--text-muted);text-decoration:line-through;">Regular ₹9,999</div></div>
+          </div>
+          <button onclick="alert('Razorpay integration coming soon — join the waitlist!')" style="width:100%;padding:0.75rem;background:linear-gradient(135deg,var(--purple-500),var(--cyan-600));border:none;border-radius:var(--radius-md);color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Get Founding Access →</button>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:600;">Monthly</div><div style="font-size:0.8rem;color:var(--text-muted);">Cancel anytime</div></div>
+          <div style="font-family:var(--font-display);font-size:1.25rem;font-weight:700;">₹999<span style="font-size:0.75rem;font-weight:400;color:var(--text-muted);">/mo</span></div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:0.8rem;color:var(--text-muted);">🔒 First 2 simulations always free. No account needed.</p>
+      <button onclick="closePaywall()" style="display:block;margin:0.75rem auto 0;background:none;border:none;cursor:pointer;font-size:0.875rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:3px;">Continue with free simulations</button>
+    </div>
+  </div>
+  <style>
+    #paywall-modal.open { opacity:1; pointer-events:all; }
+    .locked-card { opacity:0.72; }
+    .locked-card:hover { border-color:var(--purple-500) !important; opacity:1; }
+  </style>
+</body>
+</html>

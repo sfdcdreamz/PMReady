@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Mission — PMReady</title>
+  <meta name="description" content="PM data analytics simulator. Practice diagnosing business problems through data — the PM judgment skill, not the SQL skill.">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    .analytics-page { padding: var(--space-8) 0 var(--space-20); }
+    .mission-header-bar {
+      background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.15);
+      border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-6);
+    }
+    .mission-header-bar h2 { font-size: 1.15rem; margin-bottom: var(--space-2); }
+    .query-builder {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-5);
+    }
+    .query-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+      gap: var(--space-3); align-items: end; margin-bottom: var(--space-3);
+    }
+    @media (max-width: 640px) { .query-row { grid-template-columns: 1fr 1fr; } }
+    .query-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: var(--space-1); display: block; }
+    .query-select {
+      width: 100%; padding: 9px var(--space-3);
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      border-radius: var(--radius-md); color: var(--text-primary);
+      font-family: var(--font-body); font-size: 0.875rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .query-select:focus { border-color: var(--cyan-500); }
+    .query-select option { background: #1a1a35; }
+    .run-query-btn {
+      padding: 9px var(--space-5); background: rgba(6,182,212,0.15);
+      border: 1px solid rgba(6,182,212,0.3); border-radius: var(--radius-md);
+      color: var(--cyan-500); font-weight: 700; font-size: 0.875rem;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .run-query-btn:hover { background: rgba(6,182,212,0.25); }
+    .chart-container {
+      position: relative; height: 260px;
+      background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4);
+    }
+    .insight-log {
+      display: flex; flex-direction: column; gap: var(--space-2);
+      max-height: 220px; overflow-y: auto; margin-bottom: var(--space-4);
+    }
+    .insight-entry {
+      display: flex; align-items: flex-start; gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: var(--radius-md); font-size: 0.85rem;
+    }
+    .insight-entry .query-tag {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+      background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.2);
+      border-radius: var(--radius-full); color: var(--cyan-500); white-space: nowrap; flex-shrink: 0;
+    }
+    .submit-analysis-section {
+      background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.2);
+      border-radius: var(--radius-lg); padding: var(--space-5);
+    }
+    .submit-analysis-section h3 { margin-bottom: var(--space-3); }
+    .analysis-textarea {
+      width: 100%; min-height: 120px; padding: var(--space-3) var(--space-4);
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: var(--radius-md); color: var(--text-primary);
+      font-family: var(--font-body); font-size: 0.9rem; resize: vertical; outline: none;
+      transition: border-color 0.2s; line-height: 1.5;
+    }
+    .analysis-textarea:focus { border-color: var(--purple-500); }
+    .no-ai-strip {
+      display: flex; align-items: center; gap: var(--space-3);
+      background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.15);
+      border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+      font-size: 0.85rem; margin-bottom: var(--space-5);
+    }
+    .result-panel {
+      background: var(--bg-card); border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg); padding: var(--space-6); margin-top: var(--space-6);
+      display: none;
+    }
+    .ideal-query-tag {
+      display: inline-block; font-size: 0.75rem; font-weight: 600;
+      padding: 3px 10px; border-radius: var(--radius-full); margin: 2px;
+    }
+    .ideal-tag-found { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.2); color: var(--green-400); }
+    .ideal-tag-missed { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15); color: #FCA5A5; }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="nav" role="navigation">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">PM<span>Ready</span></a>
+      <div style="display:flex; align-items:center; gap:var(--space-3);">
+        <span class="badge badge-blue">🔢 Data Mission</span>
+        <a href="dashboard.html" class="btn btn-secondary btn-sm">Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="analytics-page">
+    <div class="container-narrow">
+
+      <!-- No-AI Strip -->
+      <div class="no-ai-strip" role="alert">
+        <span style="font-size:1.2rem;">🚫</span>
+        <p>This is a judgment test — not a SQL test. Use your PM instincts to choose the right data, not the most data.</p>
+      </div>
+
+      <!-- Mission prompt -->
+      <div class="mission-header-bar" role="region" aria-label="Mission prompt">
+        <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--cyan-500); margin-bottom:var(--space-2);">📊 Data Mission — Week 2</div>
+        <h2>Swiggy Instamart DAU Drop</h2>
+        <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin-top:var(--space-2);">
+          Swiggy Instamart's Daily Active Users dropped <strong style="color:var(--text-primary);">18% on Android</strong> over the last 7 days.
+          iOS is flat. The data team has given you access to the analytics dashboard below.
+          <br><br>
+          <strong style="color:var(--cyan-500);">Your task:</strong> Select up to 5 queries to investigate the drop. Then write your diagnosis — what caused it and what you recommend.
+        </p>
+      </div>
+
+      <!-- Query Builder -->
+      <div class="query-builder" role="region" aria-label="Query builder">
+        <h3 style="font-size:1rem; margin-bottom:var(--space-4);">📋 Select a Query to Run</h3>
+        <div class="query-row">
+          <div>
+            <span class="query-label">What to measure</span>
+            <select id="q-metric" class="query-select" aria-label="Select metric">
+              <option value="">— Choose metric —</option>
+              <option value="dau">Daily Active Users (DAU)</option>
+              <option value="sessions">Sessions per User</option>
+              <option value="order_rate">Order Conversion Rate</option>
+              <option value="cart_abandonment">Cart Abandonment Rate</option>
+              <option value="crash_rate">App Crash Rate</option>
+              <option value="load_time">Screen Load Time (ms)</option>
+              <option value="retention_d7">7-Day Retention</option>
+              <option value="new_vs_returning">New vs Returning Users</option>
+            </select>
+          </div>
+          <div>
+            <span class="query-label">Segment by</span>
+            <select id="q-segment" class="query-select" aria-label="Select segment">
+              <option value="platform">Platform (Android / iOS)</option>
+              <option value="city_tier">City Tier</option>
+              <option value="device_ram">Device RAM</option>
+              <option value="app_version">App Version</option>
+              <option value="acquisition">Acquisition Channel</option>
+              <option value="user_age">User Age (days since install)</option>
+            </select>
+          </div>
+          <div>
+            <span class="query-label">Time range</span>
+            <select id="q-time" class="query-select" aria-label="Select time range">
+              <option value="7d">Last 7 days</option>
+              <option value="14d">Last 14 days</option>
+              <option value="30d">Last 30 days</option>
+            </select>
+          </div>
+          <div>
+            <button class="run-query-btn" onclick="runQuery()" id="run-btn">Run Query →</button>
+          </div>
+        </div>
+        <p id="query-counter" style="font-size:0.8rem; color:var(--text-muted);">Queries run: 0 / 5 max</p>
+      </div>
+
+      <!-- Chart area -->
+      <div class="chart-container" role="region" aria-label="Query result chart">
+        <canvas id="result-chart"></canvas>
+        <div id="chart-placeholder" style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted); font-size:0.9rem;">
+          Run a query to see the data
+        </div>
+      </div>
+
+      <!-- Query log -->
+      <div id="insight-log" class="insight-log" role="log" aria-label="Query history" style="display:none;"></div>
+
+      <!-- Submit -->
+      <div class="submit-analysis-section" role="region" aria-label="Your diagnosis">
+        <h3>Your Diagnosis</h3>
+        <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:var(--space-4);">
+          Based on the queries you ran — what caused the DAU drop? What do you recommend as the first action?
+        </p>
+        <textarea id="diagnosis-text" class="analysis-textarea"
+          placeholder="Write your diagnosis here. What's the root cause? What data confirmed it? What's your recommendation for the next 48 hours?"
+          aria-label="Your diagnosis"></textarea>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:var(--space-3); flex-wrap:wrap; gap:var(--space-3);">
+          <span id="diag-char-count" style="font-size:0.8rem; color:var(--text-muted);">0 characters</span>
+          <button class="btn btn-primary" onclick="submitAnalysis()" id="submit-analysis-btn">Submit Diagnosis →</button>
+        </div>
+      </div>
+
+      <!-- Result Panel -->
+      <div id="result-panel" class="result-panel" role="region" aria-label="Analysis feedback">
+        <h2 style="margin-bottom:var(--space-4);">📊 Feedback on Your Data Investigation</h2>
+        <div id="result-content"></div>
+        <div style="margin-top:var(--space-8); display:flex; gap:var(--space-4); flex-wrap:wrap;">
+          <a href="dashboard.html" class="btn btn-primary">Back to Dashboard →</a>
+          <a href="simulate.html" class="btn btn-secondary">Do a Case Simulation</a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script type="module">
+    const state = await loadState();
+    if (!state.archetype) { window.location.href = 'detect.html'; }
+    // ── Static Swiggy Instamart dataset ───────────────────
+    const DATASET = {
+      dau: {
+        platform: {
+          labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+          android: [142000,138000,124000,116000,108000,104000,98000],
+          ios:     [48000, 49000, 48500, 49200, 48800, 50000, 49500]
+        },
+        city_tier: {
+          labels: ['Tier-1', 'Tier-2', 'Tier-3'],
+          values_before: [95000, 62000, 33000],
+          values_after:  [92000, 49000, 19000]
+        },
+        device_ram: {
+          labels: ['<2GB RAM', '2-3GB RAM', '4GB RAM', '6GB+ RAM'],
+          values: [-38, -31, -12, -2]  // % change
+        },
+        app_version: {
+          labels: ['v4.1.2 (old)', 'v4.2.0 (7d ago)', 'v4.2.1 (2d ago)'],
+          values: [2, -24, -3]  // % change since release
+        }
+      },
+      crash_rate: {
+        platform: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], android: [0.8,0.9,4.2,5.1,5.3,5.0,4.8], ios: [0.7,0.8,0.7,0.9,0.8,0.8,0.7] },
+        app_version: { labels: ['v4.1.2','v4.2.0','v4.2.1'], values: [0.8, 5.1, 0.9] }
+      },
+      load_time: {
+        platform: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], android: [1200,1180,2800,3100,3050,2950,2900], ios: [980,990,1010,1000,990,985,995] },
+        device_ram: { labels: ['<2GB RAM', '2-3GB RAM', '4GB RAM', '6GB+ RAM'], values: [5800, 3900, 2200, 1100] }
+      },
+      order_rate: {
+        platform: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], android: [32,31,21,18,17,18,17], ios: [38,38,37,38,37,39,38] }
+      },
+      cart_abandonment: {
+        platform: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], android: [44,45,58,63,65,63,64], ios: [42,41,41,42,42,40,41] }
+      },
+      new_vs_returning: {
+        platform: {
+          labels: ['New', 'Returning <7days', 'Returning >30days'],
+          android_before: [22, 35, 43],
+          android_after:  [21, 24, 55]
+        }
+      }
+    };
+
+    // ── Ideal queries (what a senior PM would run) ─────────
+    const IDEAL_QUERIES = [
+      { metric: 'crash_rate', segment: 'platform', label: 'Crash Rate by Platform' },
+      { metric: 'crash_rate', segment: 'app_version', label: 'Crash Rate by App Version' },
+      { metric: 'load_time', segment: 'platform', label: 'Load Time by Platform' },
+      { metric: 'dau', segment: 'app_version', label: 'DAU change by App Version' },
+      { metric: 'order_rate', segment: 'platform', label: 'Order Rate by Platform' },
+    ];
+
+    const KEY_INSIGHT = `The root cause is <strong>v4.2.0 (released 7 days ago)</strong> — it introduced a crash rate spike on Android (0.8% → 5.1%) and tripled screen load time on low-RAM Android devices. iOS was unaffected because v4.2.0 only shipped to Android. The DAU drop is users abandoning after repeated crashes or slow loads.</p>
+    <p style="margin-top:var(--space-3);"><strong>First recommendation (next 48 hours):</strong> Rollback or force-update to v4.2.1 for affected Android users. Instrument session abandonment at the screen where crash rate is highest to confirm.`;
+
+    let queriesRun = [];
+    let chartInstance = null;
+    let maxQueries = 5;
+
+    document.getElementById('diagnosis-text').addEventListener('input', () => {
+      document.getElementById('diag-char-count').textContent = `${document.getElementById('diagnosis-text').value.length} characters`;
+    });
+
+    window.runQuery = function() {
+      if (queriesRun.length >= maxQueries) {
+        alert(`You've reached the ${maxQueries} query limit. A good PM picks the right data — not all the data. Submit your diagnosis.`);
+        return;
+      }
+      const metric = document.getElementById('q-metric').value;
+      const segment = document.getElementById('q-segment').value;
+      const time = document.getElementById('q-time').value;
+      if (!metric) { alert('Select a metric to measure.'); return; }
+
+      const key = `${metric}__${segment}`;
+      if (queriesRun.find(q => q.key === key)) {
+        alert('You\'ve already run this query. Try a different combination.'); return;
+      }
+
+      queriesRun.push({ key, metric, segment, time });
+
+      const count = queriesRun.length;
+      document.getElementById('query-counter').textContent = `Queries run: ${count} / ${maxQueries} max`;
+      if (count >= maxQueries) {
+        document.getElementById('run-btn').textContent = 'Max queries reached';
+        document.getElementById('run-btn').disabled = true;
+        document.getElementById('run-btn').style.opacity = '0.5';
+      }
+
+      updateChart(metric, segment);
+      logInsight(metric, segment, time);
+    }
+
+    function updateChart(metric, segment) {
+      const container = document.getElementById('chart-container') || document.querySelector('.chart-container');
+      document.getElementById('chart-placeholder').style.display = 'none';
+
+      const data = DATASET[metric]?.[segment];
+      if (!data) {
+        document.getElementById('chart-placeholder').style.display = 'flex';
+        document.getElementById('chart-placeholder').textContent = 'No data available for this combination.'; return;
+      }
+
+      if (chartInstance) chartInstance.destroy();
+
+      const ctx = document.getElementById('result-chart').getContext('2d');
+      const metricLabels = { dau:'DAU', crash_rate:'Crash Rate (%)', load_time:'Load Time (ms)', order_rate:'Order Rate (%)', cart_abandonment:'Cart Abandonment (%)', new_vs_returning:'Users (%)' };
+      const mLabel = metricLabels[metric] || metric;
+
+      let chartData, chartType = 'bar';
+
+      if (data.android && data.labels) {
+        chartType = 'line';
+        chartData = {
+          labels: data.labels,
+          datasets: [
+            { label: `Android — ${mLabel}`, data: data.android, borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,0.1)', tension: 0.3, fill: true },
+            { label: `iOS — ${mLabel}`, data: data.ios, borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.08)', tension: 0.3, fill: true }
+          ]
+        };
+      } else if (data.values && data.labels) {
+        chartData = {
+          labels: data.labels,
+          datasets: [{ label: mLabel, data: data.values, backgroundColor: data.values.map(v => v < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(16,185,129,0.6)'), borderColor: data.values.map(v => v < 0 ? '#EF4444' : '#10B981'), borderWidth: 1 }]
+        };
+      } else if (data.values_before && data.labels) {
+        chartData = {
+          labels: data.labels,
+          datasets: [
+            { label: 'Before (7d ago)', data: data.values_before, backgroundColor: 'rgba(124,58,237,0.4)', borderColor: '#7c3aed', borderWidth:1 },
+            { label: 'After (now)', data: data.values_after, backgroundColor: 'rgba(239,68,68,0.4)', borderColor: '#EF4444', borderWidth:1 }
+          ]
+        };
+      } else if (data.android_before && data.labels) {
+        chartData = {
+          labels: data.labels,
+          datasets: [
+            { label: 'Android Before', data: data.android_before, backgroundColor: 'rgba(124,58,237,0.4)', borderColor:'#7c3aed', borderWidth:1 },
+            { label: 'Android After', data: data.android_after, backgroundColor: 'rgba(239,68,68,0.4)', borderColor:'#EF4444', borderWidth:1 }
+          ]
+        };
+      } else {
+        document.getElementById('chart-placeholder').style.display = 'flex';
+        document.getElementById('chart-placeholder').textContent = 'No data for this segment.'; return;
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: chartType,
+        data: chartData,
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#a1a1b5', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+          }
+        }
+      });
+    }
+
+    const INSIGHT_MAP = {
+      'crash_rate__platform': 'Android crash rate spiked 5x (0.8% → 5.1%) on Wed. iOS unchanged.',
+      'crash_rate__app_version': 'Crash rate on v4.2.0 is 5.1% — released 7 days ago. v4.1.2 and v4.2.1 are both under 1%.',
+      'load_time__platform': 'Android load time tripled on Wed (1.2s → 3.1s). iOS load time flat.',
+      'load_time__device_ram': 'Devices with <2GB RAM show 5.8s average load time. Impact concentrated on budget Android.',
+      'dau__app_version': 'DAU dropped -24% on v4.2.0 since release. v4.1.2 users stable (+2%).',
+      'dau__platform': 'Android DAU dropped from 142k to 98k over 7 days. iOS DAU flat around 49k.',
+      'dau__city_tier': 'Tier-2 and Tier-3 DAU dropped 21% and 42%. Tier-1 largely stable.',
+      'dau__device_ram': 'Biggest DAU drop on <2GB (-38%) and 2-3GB RAM (-31%) devices.',
+      'order_rate__platform': 'Android order conversion dropped from 32% to 17%. iOS stable at 38%.',
+      'cart_abandonment__platform': 'Android cart abandonment jumped from 44% to 64%. iOS unchanged at ~41%.',
+      'new_vs_returning__platform': 'Returning Android users (7-day cohort): dropped from 35% to 24% of active users.'
+    };
+
+    function logInsight(metric, segment, time) {
+      const log = document.getElementById('insight-log');
+      log.style.display = 'flex';
+      const key = `${metric}__${segment}`;
+      const insight = INSIGHT_MAP[key] || 'Data retrieved. Check the chart above.';
+      const metricName = metric.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const segName = segment.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const entry = document.createElement('div');
+      entry.className = 'insight-entry';
+      entry.innerHTML = `<span class="query-tag">${metricName} × ${segName}</span><span style="color:var(--text-secondary);">${insight}</span>`;
+      log.prepend(entry);
+    }
+    window.logInsight = logInsight;
+
+    // ── Submit Analysis ───────────────────────────────────
+    window.submitAnalysis = async function() {
+      const diagnosis = document.getElementById('diagnosis-text').value.trim();
+      if (diagnosis.length < 30) { alert('Write at least a short diagnosis before submitting.'); return; }
+
+      // Score: compare queries run vs ideal
+      const foundIdeal = IDEAL_QUERIES.filter(iq =>
+        queriesRun.some(r => r.metric === iq.metric && r.segment === iq.segment)
+      );
+      const missedIdeal = IDEAL_QUERIES.filter(iq =>
+        !queriesRun.some(r => r.metric === iq.metric && r.segment === iq.segment)
+      );
+
+      // Check if diagnosis mentions root cause
+      const lower = diagnosis.toLowerCase();
+      const mentionsCrash = lower.includes('crash') || lower.includes('v4.2');
+      const mentionsLoadTime = lower.includes('load') || lower.includes('slow') || lower.includes('performance');
+      const mentionsAndroid = lower.includes('android');
+      const correctDiagnosis = mentionsCrash && mentionsAndroid;
+
+      const panel = document.getElementById('result-panel');
+      const content = document.getElementById('result-content');
+      panel.style.display = 'block';
+      panel.scrollIntoView({ behavior: 'smooth' });
+
+      content.innerHTML = `
+        <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-6);">
+          <div style="font-size:2rem;">${correctDiagnosis ? '🟢' : '🟡'}</div>
+          <div>
+            <div style="font-weight:700; font-size:1.1rem;">${correctDiagnosis ? 'Correct Diagnosis' : 'Partially Correct'}</div>
+            <div style="font-size:0.85rem; color:var(--text-muted);">${foundIdeal.length} of ${IDEAL_QUERIES.length} high-signal queries selected</div>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom:var(--space-3);">Queries You Should Have Run</h3>
+        <div style="margin-bottom:var(--space-5);">
+          ${IDEAL_QUERIES.map(iq => {
+            const found = queriesRun.some(r => r.metric === iq.metric && r.segment === iq.segment);
+            return `<span class="ideal-query-tag ${found ? 'ideal-tag-found' : 'ideal-tag-missed'}">${found ? '✓' : '○'} ${iq.label}</span>`;
+          }).join('')}
+        </div>
+
+        <h3 style="margin-bottom:var(--space-3);">What the Data Shows</h3>
+        <p style="color:var(--text-secondary); line-height:1.7; margin-bottom:var(--space-5);">${KEY_INSIGHT}</p>
+
+        ${mentionsCrash ? `<div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:var(--radius-md); padding:var(--space-4); margin-bottom:var(--space-4);">
+          <p style="color:var(--green-400); font-weight:600;">✅ You correctly identified the crash/version as the root cause.</p>
+        </div>` : `<div style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:var(--radius-md); padding:var(--space-4); margin-bottom:var(--space-4);">
+          <p style="color:#FCA5A5; font-weight:600;">⚠️ The crash rate spike on v4.2.0 was the root cause. Running Crash Rate × App Version would have surfaced this in one query.</p>
+        </div>`}
+
+        <div style="background:rgba(124,58,237,0.07); border:1px solid rgba(124,58,237,0.2); border-radius:var(--radius-md); padding:var(--space-4);">
+          <strong style="color:var(--purple-400);">⚡ PM Judgment Insight</strong>
+          <p style="margin-top:var(--space-2); font-size:0.875rem; color:var(--text-secondary);">A senior PM's first instinct with a platform-segmented drop: check crash rate by app version. The iOS vs Android isolation is a technical signal, not a user behaviour signal — which makes the version difference the first hypothesis, not the last.</p>
+        </div>
+      `;
+
+      // Save to state
+      const state = await loadState();
+      const simCompleted = (state.simCompleted || 0) + 1;
+      const prevScores = state.allScores || [];
+      const analyticsScore = correctDiagnosis ? (foundIdeal.length >= 3 ? 78 : 62) : 45;
+      prevScores.push(analyticsScore);
+      const avgScore = Math.round(prevScores.reduce((a,b)=>a+b,0)/prevScores.length);
+      await saveState({ simCompleted, avgScore, allScores: prevScores, dataMissionDone: true });
+
+      document.getElementById('submit-analysis-btn').textContent = '✓ Submitted';
+      document.getElementById('submit-analysis-btn').disabled = true;
+    }
+  </script>
+</body>
+</html>

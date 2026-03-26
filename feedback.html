@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Directional Feedback — PMReady</title>
+  <meta name="description" content="4-question directional feedback on your PM case simulation. Background-calibrated. Actionable.">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .feedback-page { padding: var(--space-8) 0 var(--space-20); }
+    .score-header {
+      text-align: center; padding: var(--space-8) 0;
+    }
+    .score-circle {
+      width: 100px; height: 100px; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      margin: 0 auto var(--space-5);
+      border: 3px solid;
+      position: relative;
+    }
+    .score-circle .score-val { font-family: var(--font-display); font-size: 2rem; font-weight: 700; line-height: 1; }
+    .score-circle .score-lbl { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+    .score-low   { border-color: #EF4444; box-shadow: 0 0 20px rgba(239,68,68,0.2); }
+    .score-mid   { border-color: #F59E0B; box-shadow: 0 0 20px rgba(245,158,11,0.2); }
+    .score-high  { border-color: #10B981; box-shadow: 0 0 20px rgba(16,185,129,0.2); }
+    .score-low .score-val   { color: #EF4444; }
+    .score-mid .score-val   { color: #F59E0B; }
+    .score-high .score-val  { color: #10B981; }
+    .state-updated {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full); font-size: 0.875rem; font-weight: 600;
+      margin: var(--space-3) 0;
+    }
+    .fi-label { font-size: 0.875rem; font-weight: 700; }
+    .action-box-next {
+      background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2);
+      border-radius: var(--radius-md); padding: var(--space-4) var(--space-5); margin-top: var(--space-5);
+    }
+    .action-box-next strong { color: var(--purple-400); }
+    .section-divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: var(--space-8) 0;
+    }
+    .response-preview {
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: var(--space-4); max-height: 200px;
+      overflow-y: auto; font-size: 0.875rem; color: var(--text-secondary); line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">PM<span>Ready</span></a>
+      <span class="badge badge-purple">Directional Feedback</span>
+    </div>
+  </nav>
+
+  <main class="feedback-page" id="feedback-main">
+    <div class="container-narrow">
+      <div id="loading-fb" class="text-center" style="padding:var(--space-16);">
+        <div style="font-size:3rem; margin-bottom:var(--space-4);">💬</div>
+        <h2>Generating your feedback…</h2>
+        <p>Calibrating to your background and target role.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script type="module">
+    const state = await loadState();
+    
+    if (!state.lastScore || !state.lastCaseId) {
+      window.location.href = 'dashboard.html';
+    }
+    
+    const score = parseInt(sessionStorage.getItem('lastScore') || state.lastScore, 10);
+    const caseId = sessionStorage.getItem('lastCaseId') || state.lastCaseId;
+    const responseText = sessionStorage.getItem('feedbackResponse') || state[`response_${caseId}`] || '';
+    
+    // Parse rubric dimensions safely
+    let rubricDimensions = JSON.parse(sessionStorage.getItem('rubricDimensions') || 'null');
+
+    if (!state.archetype || !caseId) {
+      window.location.href = 'dashboard.html';
+    }
+
+    setTimeout(renderFeedback, 800);
+
+    function renderFeedback() {
+      const archetype = ARCHETYPES[state.archetype] || ARCHETYPES['growth_pm'];
+      const bg = BACKGROUNDS[state.background] || BACKGROUNDS['engineer'];
+      const cas = CASES[caseId] || {};
+      const bgId = state.background || 'engineer';
+      const format = cas.format || 'format_a';
+
+
+
+      // Get template for background + format
+      const templates = FEEDBACK_TEMPLATES[bgId] || FEEDBACK_TEMPLATES['engineer'];
+      const tpl = templates[format] || templates[Object.keys(templates)[0]];
+
+      // Pick the observed strength from rubric
+      const lower = responseText.toLowerCase();
+      const matchedStrengths = cas.rubric
+        ? cas.rubric.strength_indicators.filter(si => {
+            const kws = si.toLowerCase().split(' ').filter(w => w.length > 4);
+            return kws.some(kw => lower.includes(kw));
+          })
+        : [];
+      const matchedGaps = cas.rubric
+        ? cas.rubric.gap_indicators.filter(gi => {
+            const kws = gi.toLowerCase().split(' ').filter(w => w.length > 4);
+            return kws.some(kw => lower.includes(kw));
+          })
+        : [];
+
+      const specificStrength = matchedStrengths.length > 0
+        ? matchedStrengths[0]
+        : 'your structured approach to framing the problem';
+
+      const specificGap = matchedGaps.length > 0
+        ? matchedGaps[0]
+        : 'the success metric definition came after the solution rather than before it';
+
+      const q1 = tpl.q1_template.replace('[specific]', specificStrength);
+      const q2 = tpl.q2_template.replace('[specific_gap]', specificGap).replace('[gap_context]', 'the metric or success condition must be defined before you brainstorm any solution — that sequence signals PM-level thinking');
+      const q3 = tpl.q3_template;
+      const q4 = tpl.q4_template;
+
+      // Readiness update
+      const readiness = computeReadiness(state);
+      saveState({ readinessState: readiness });
+      const rs = READINESS_STATES[readiness];
+
+      // Score metadata
+      const scoreClass = score >= 75 ? 'score-high' : score >= 55 ? 'score-mid' : 'score-low';
+      const scoreLetter = score >= 75 ? '🟢' : score >= 55 ? '🟡' : '🔵';
+      const scoreLabel = score >= 75 ? 'Strong Performance' : score >= 55 ? 'Developing' : 'Building';
+
+      // Needs validation first?
+      const needsValidation = bg.needsValidation;
+
+      document.getElementById('feedback-main').innerHTML = `
+        <div class="container-narrow">
+
+          <!-- Score Header -->
+          <div class="score-header">
+            <div class="score-circle ${scoreClass}" aria-label="Performance score: ${score}%">
+              <span class="score-val">${score}</span>
+              <span class="score-lbl">/ 100</span>
+            </div>
+            <h2 style="margin-bottom:var(--space-2);">${scoreLabel}</h2>
+            <p style="color:var(--text-secondary); margin-bottom:var(--space-3);">${cas.title || 'Case Simulation'} · ${archetype.name}</p>
+            <div class="state-updated ${rs.className}">${rs.label}</div>
+          </div>
+
+          <!-- Score bar -->
+          <div class="feedback-score-bar" role="progressbar" aria-valuenow="${score}" aria-valuemin="0" aria-valuemax="100">
+            <div class="feedback-score-fill" id="score-fill" style="width:0%; background:${score >= 75 ? 'var(--green-500)' : score >= 55 ? 'var(--amber-500)' : 'var(--building)'};"></div>
+          </div>
+
+          <hr class="section-divider">
+
+          <!-- Validation statement first if needed -->
+          ${needsValidation ? `
+            <div class="validation-box" role="note" style="margin-bottom:var(--space-6);">
+              <span class="label">🌟 Before Anything Else</span>
+              <p>${bg.validationStatement}</p>
+            </div>
+          ` : ''}
+
+          <h2 style="margin-bottom:var(--space-6);">Directional Feedback</h2>
+          <p style="color:var(--text-secondary); margin-bottom:var(--space-6);">Every simulation produces 4 specific statements — calibrated to your background as a <strong style="color:var(--text-primary);">${bg.label}</strong> targeting <strong style="color:var(--purple-400);">${archetype.name}</strong> roles.</p>
+
+          <!-- Q1 — What you did well -->
+          <div class="feedback-item fi-q1" role="region" aria-label="Feedback: What you did well">
+            <div class="feedback-item-header">
+              <div class="fi-number" aria-hidden="true">1</div>
+              <span class="fi-label">✅ What You Did Well</span>
+            </div>
+            <div class="feedback-item-body">${q1}</div>
+          </div>
+
+          <!-- Q2 — Where thinking broke down -->
+          <div class="feedback-item fi-q2" role="region" aria-label="Feedback: Where thinking broke down">
+            <div class="feedback-item-header">
+              <div class="fi-number" aria-hidden="true">2</div>
+              <span class="fi-label">⚠️ Where the Thinking Broke Down</span>
+            </div>
+            <div class="feedback-item-body">${q2}</div>
+          </div>
+
+          <!-- Q3 — Why it matters for your role -->
+          <div class="feedback-item fi-q3" role="region" aria-label="Feedback: Why it matters for your role">
+            <div class="feedback-item-header">
+              <div class="fi-number" aria-hidden="true">3</div>
+              <span class="fi-label">🎯 Why This Matters for ${archetype.name} Roles</span>
+            </div>
+            <div class="feedback-item-body">${q3}</div>
+          </div>
+
+          <!-- Q4 — What to do next session -->
+          <div class="feedback-item fi-q4" role="region" aria-label="Feedback: What to do next session">
+            <div class="feedback-item-header">
+              <div class="fi-number" aria-hidden="true">4</div>
+              <span class="fi-label">⚡ What To Do in Your Next Session</span>
+            </div>
+            <div class="feedback-item-body">${q4}</div>
+          </div>
+
+          <!-- 5-Dimension Rubric Breakdown -->
+          ${rubricDimensions ? `
+          <hr class="section-divider">
+          <h3 style="margin-bottom:var(--space-2);">5-Dimension Rubric Breakdown</h3>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:var(--space-5);">How your response scored across the 5 PM judgment dimensions.</p>
+          <div style="display:grid; gap:var(--space-3); margin-bottom:var(--space-6);">
+            ${Object.entries(RUBRIC_DIMENSIONS).map(([key, dim]) => {
+              const val = rubricDimensions[key] || 0;
+              const barColor = val >= 70 ? 'var(--green-500)' : val >= 45 ? 'var(--amber-500)' : 'var(--purple-500)';
+              return `<div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <span style="font-size:0.85rem; font-weight:600;">${dim.label}</span>
+                  <span style="font-size:0.8rem; color:var(--text-muted);">${val}<span style="font-size:0.7rem;">/100</span></span>
+                </div>
+                <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                  <div style="height:100%; width:${val}%; background:${barColor}; border-radius:3px; transition:width 0.8s ease;"></div>
+                </div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">${dim.description}</p>
+              </div>`;
+            }).join('')}
+          </div>` : ''}
+
+          <!-- Calibration note -->
+          <div class="calibration-note" role="note">
+            Candidates at your current stage typically take 3–4 sessions to sharpen this instinct. You are on the expected path. Missing a week is not a setback — it's expected for working professionals.
+          </div>
+
+          <!-- Readiness update -->
+          <div class="card card-glow" style="margin-top:var(--space-8); text-align:center; padding:var(--space-8);">
+            <h3 style="margin-bottom:var(--space-4);">Readiness Update</h3>
+            <div class="readiness-signal ${rs.className}" style="justify-content:center; font-size:1.1rem; padding:var(--space-4) var(--space-6); display:inline-flex; margin-bottom:var(--space-4);" role="status">
+              ${rs.label}
+            </div>
+            <p style="color:var(--text-secondary); margin-bottom:var(--space-6);">${rs.message} ${rs.subMessage}</p>
+            ${rs.id === 'ready' ? `
+              <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:var(--radius-md); padding:var(--space-5); margin-bottom:var(--space-5);">
+                <p style="color:var(--green-400); font-weight:600; font-size:1.05rem;">🟢 You are ready. Not perfect — ready.</p>
+                <p style="color:var(--text-secondary); margin-top:var(--space-2);">Apply to 3–5 ${archetype.name} roles this week. Come back after each interview to debrief. The remaining gaps close faster in real interviews than in simulations.</p>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Your response preview -->
+          <hr class="section-divider">
+          <h3 style="margin-bottom:var(--space-4);">Your Response</h3>
+          <div class="response-preview" role="region" aria-label="Your submitted response">
+            ${responseText.replace(/\n/g, '<br>') || '<em style="color:var(--text-muted)">No response submitted.</em>'}
+          </div>
+
+          <!-- Rubric indicators -->
+          ${cas.rubric ? `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4); margin-top:var(--space-6);">
+              <div class="mini-card" style="background:rgba(16,185,129,0.05); border-color:rgba(16,185,129,0.15);">
+                <h4 style="color:var(--green-400); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:var(--space-3);">✅ Strong Indicators (seen in your answer)</h4>
+                ${(cas.rubric.strength_indicators || []).map(s => {
+                  const kws = s.toLowerCase().split(' ').filter(w => w.length > 4);
+                  const found = kws.some(kw => lower.includes(kw));
+                  return `<p style="font-size:0.8rem; color:${found ? 'var(--green-400)' : 'var(--text-muted)'}; margin-bottom:4px;">${found ? '✓' : '○'} ${s}</p>`;
+                }).join('')}
+              </div>
+              <div class="mini-card" style="background:rgba(239,68,68,0.05); border-color:rgba(239,68,68,0.15);">
+                <h4 style="color:#FCA5A5; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:var(--space-3);">⚠️ Gaps to Watch</h4>
+                ${(cas.rubric.gap_indicators || []).map(g => {
+                  return `<p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">→ ${g}</p>`;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- CTAs -->
+          <div class="action-box-next" style="margin-top:var(--space-8);">
+            <strong>⚡ Your Next Action</strong>
+            <p style="margin-top:var(--space-2); color:var(--text-secondary);">${q4}</p>
+          </div>
+
+          <div style="display:flex; gap:var(--space-4); flex-wrap:wrap; justify-content:center; margin-top:var(--space-8);">
+            <a href="dashboard.html" class="btn btn-primary btn-lg">Back to Dashboard →</a>
+            <a href="simulate.html" class="btn btn-secondary btn-lg">Do Another Simulation</a>
+          </div>
+
+        </div>
+      `;
+
+      // Animate score bar
+      setTimeout(() => {
+        const fill = document.getElementById('score-fill');
+        if (fill) fill.style.width = score + '%';
+      }, 300);
+
+      // Clear session storage
+      sessionStorage.removeItem('lastScore');
+      sessionStorage.removeItem('lastCaseId');
+      sessionStorage.removeItem('feedbackResponse');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PMReady — India's PM Career Navigation Platform</title>
+  <meta name="description"
+    content="Know your PM fit. Build your path. Know exactly when you're ready to apply. India's only personalised PM prep platform built on real data.">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* landing-specific overrides */
+    .backgrounds-scroll {
+      display: flex;
+      gap: var(--space-3);
+      overflow-x: auto;
+      padding-bottom: var(--space-3);
+      scrollbar-width: none;
+    }
+
+    .backgrounds-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .bg-pill {
+      flex-shrink: 0;
+      padding: var(--space-2) var(--space-4);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      white-space: nowrap;
+      color: var(--text-secondary);
+    }
+
+    .loop-chart {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      row-gap: var(--space-4);
+    }
+
+    .loop-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: var(--space-4) var(--space-5);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      min-width: 110px;
+    }
+
+    .loop-step .step-num {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--purple-400);
+      margin-bottom: var(--space-2);
+    }
+
+    .loop-step .step-emoji {
+      font-size: 1.6rem;
+      margin-bottom: var(--space-2);
+    }
+
+    .loop-step .step-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .loop-step .step-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .loop-arrow {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      padding: 0 var(--space-2);
+    }
+
+    .anti-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .anti-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px solid rgba(239, 68, 68, 0.15);
+      border-radius: var(--radius-md);
+    }
+
+    .anti-item .anti-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .anti-item p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .anti-item strong {
+      color: var(--text-primary);
+    }
+
+    .why-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .why-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+    }
+
+    .why-card .why-stat {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--purple-400), var(--cyan-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .why-card p {
+      font-size: 0.875rem;
+      margin-top: var(--space-1);
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--purple-400);
+      display: block;
+      margin-bottom: var(--space-4);
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: var(--space-8) 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── Profile Modal ────────────────────────────── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-xl);
+      width: 100%;
+      max-width: 560px;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 40px var(--purple-glow);
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-backdrop.open .modal-box {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      padding: var(--space-6) var(--space-6) 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .modal-close-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 1rem;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-primary);
+    }
+
+    .modal-accuracy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px var(--space-3);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--green-400);
+      margin-bottom: var(--space-3);
+    }
+
+    .modal-body {
+      padding: var(--space-5) var(--space-6);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    @media (max-width: 480px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      margin-bottom: var(--space-4);
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-2);
+      letter-spacing: 0.02em;
+    }
+
+    .form-label .optional {
+      font-weight: 400;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-left: 4px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px var(--space-4);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--purple-500);
+      background: rgba(124, 58, 237, 0.06);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    select.form-input option {
+      background: #1a1a35;
+    }
+
+    textarea.form-input {
+      min-height: 88px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .modal-footer {
+      padding: var(--space-5) var(--space-6) var(--space-6);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .modal-skip-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+    }
+
+    .skip-link {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.2s;
+      font-family: var(--font-body);
+    }
+
+    .skip-link:hover {
+      color: var(--text-secondary);
+    }
+
+    .skip-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo" aria-label="PMReady home">PM<span>Ready</span></a>
+      <button onclick="openProfileModal()" class="nav-cta" id="nav-cta">Find My PM Fit →</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-eyebrow">
+          <span>🇮🇳</span>
+          Built for India's PM Candidates
+        </div>
+        <h1 class="hero-title" id="hero-heading">
+          Know your PM fit.<br>
+          <span class="gradient-text">Build your path.</span><br>
+          Know when you're ready.
+        </h1>
+        <p class="hero-subtitle">
+          India's only personalised PM prep platform that tells you exactly where you stand,
+          what to do next — and signals when you're ready to apply.
+          No streaks. No badges. No generic courses.
+        </p>
+        <div class="hero-cta-group">
+          <button onclick="openProfileModal()" class="btn btn-primary btn-lg" id="hero-cta">
+            Find My PM Fit — 10 min
+          </button>
+          <a href="#how-it-works" class="btn btn-secondary btn-lg">See how it works</a>
+        </div>
+
+        <!-- Beta Slots Counter -->
+
+        <div id="beta-counter" style="margin-top:var(--space-8); background:rgba(124,58,237,0.07); border:1px solid rgba(124,58,237,0.18); border-radius:var(--radius-lg); padding:var(--space-4) var(--space-5); max-width:480px;" role="status" aria-live="polite">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-2);">
+            <span style="font-size:0.85rem; color:var(--text-secondary);">🔵 <span id="pm-count">247</span> aspiring PMs have started their journey</span>
+            <span style="font-size:0.75rem; color:var(--purple-400); font-weight:700;">Founding Member</span>
+          </div>
+          <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; margin-bottom:var(--space-2);">
+            <div id="founding-bar" style="height:100%; width:47%; background:linear-gradient(90deg,var(--purple-500),var(--cyan-500)); border-radius:3px;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="font-size:0.75rem; color:var(--text-muted);">₹1,999 founding price · Regular ₹9,999</span>
+            <span style="font-size:0.75rem; color:var(--text-muted);"><strong style="color:var(--purple-400);" id="slots-left">53</strong> founding slots left</span>
+          </div>
+        </div>
+
+        <!-- Backgrounds strip -->
+        <div class="mt-10">
+          <div class="backgrounds-scroll" aria-label="Supported backgrounds">
+            <div class="bg-pill">👩‍💻 Software Engineer</div>
+            <div class="bg-pill">🎓 MBA Graduate</div>
+            <div class="bg-pill">📊 Business Analyst</div>
+            <div class="bg-pill">🎨 UX Designer</div>
+            <div class="bg-pill">📈 Data Analyst</div>
+            <div class="bg-pill">🔍 QA Engineer</div>
+            <div class="bg-pill">🔄 Scrum Master</div>
+            <div class="bg-pill">⚙️ Operations Manager</div>
+            <div class="bg-pill">🤝 Product Support</div>
+            <div class="bg-pill">🌐 Career Switcher</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS STRIP -->
+  <section style="padding: 0;">
+    <div class="container">
+      <div class="stats-strip" role="region" aria-label="India PM market statistics">
+        <div class="stat-item">
+          <span class="stat-value">17,000+</span>
+          <div class="stat-label">Open PM roles in India</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">+42%</span>
+          <div class="stat-label">India PM hiring growth YoY</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">+255%</span>
+          <div class="stat-label">MNC/GCC senior PM hiring</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">4–7</span>
+          <div class="stat-label">Platforms avg candidate uses — no clear path</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">₹0</span>
+          <div class="stat-label">Actionable feedback most candidates receive</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY PMREADY -->
+  <section>
+    <div class="container">
+      <span class="section-label">The Real Problem</span>
+      <h2 style="max-width:600px; margin-bottom:var(--space-8)">
+        The India PM prep market has a structural failure — not a content gap.
+      </h2>
+      <div class="why-grid">
+        <div class="why-card">
+          <div class="why-stat">T1</div>
+          <h4 style="margin: var(--space-2) 0;">Preparation Fragmentation</h4>
+          <p>The average Indian PM candidate uses 4–7 disconnected platforms. No single source provides what they need.
+            The cost is misdirected effort — not lack of motivation.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-stat">T2</div>
+          <h4 style="margin: var(--space-2) 0;">Roadmap Void</h4>
+          <p>"Jobs before skills" — candidates apply before they know what to learn. No platform maps background →
+            specific PM role type → personalised preparation path.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-stat">T3</div>
+          <h4 style="margin: var(--space-2) 0;">Feedback Void</h4>
+          <p>After rejection, candidates receive nothing. After practice, they receive nothing. After months of effort,
+            they have no signal of progress. Repetition without feedback is not preparation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE CORE LOOP -->
+  <section id="how-it-works">
+    <div class="container">
+      <span class="section-label">How It Works</span>
+      <h2 class="text-center" style="margin-bottom:var(--space-3)">One loop. Nine backgrounds.</h2>
+      <p class="text-center" style="max-width:500px; margin: 0 auto var(--space-12);">
+        The product loop is universal. What adapts per background:
+        your starting point, your case library, your feedback, and your readiness threshold.
+      </p>
+
+      <div class="loop-chart" role="list" aria-label="Core product loop">
+        <div class="loop-step" role="listitem">
+          <span class="step-num">Step 1</span>
+          <span class="step-emoji">🔍</span>
+          <span class="step-label">DETECT</span>
+          <span class="step-sub">Where are you?</span>
+        </div>
+        <span class="loop-arrow" aria-hidden="true">→</span>
+        <div class="loop-step" role="listitem">
+          <span class="step-num">Step 2</span>
+          <span class="step-emoji">🧭</span>
+          <span class="step-label">ORIENT</span>
+          <span class="step-sub">Your starting point</span>
+        </div>
+        <span class="loop-arrow" aria-hidden="true">→</span>
+        <div class="loop-step" role="listitem">
+          <span class="step-num">Step 3</span>
+          <span class="step-emoji">⚡</span>
+          <span class="step-label">PRACTISE</span>
+          <span class="step-sub">Weekly Mission</span>
+        </div>
+        <span class="loop-arrow" aria-hidden="true">→</span>
+        <div class="loop-step" role="listitem">
+          <span class="step-num">Step 4</span>
+          <span class="step-emoji">💬</span>
+          <span class="step-label">CLOSE</span>
+          <span class="step-sub">Directional Feedback</span>
+        </div>
+        <span class="loop-arrow" aria-hidden="true">→</span>
+        <div class="loop-step" role="listitem">
+          <span class="step-num">Step 5</span>
+          <span class="step-emoji">🎯</span>
+          <span class="step-label">SIGNAL</span>
+          <span class="step-sub">Ready to apply?</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section>
+    <div class="container">
+      <span class="section-label">Core Features</span>
+      <h2 style="margin-bottom:var(--space-8)">Built differently — on purpose.</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔍</div>
+          <h3>State Detection Engine</h3>
+          <p>A 10-minute adaptive diagnostic that detects where you actually are in your journey — not where Day 0 was.
+            Outputs a personalised Starting Point Card. Mid-journey candidates are never shown content they've already
+            covered.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧭</div>
+          <h3>Role Discovery Path</h3>
+          <p>Four India PM archetypes — Technical PM, Growth PM, Consumer PM, AI PM — mapped to your background,
+            instincts, and target company type. Comes with India salary ranges and target employers.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📋</div>
+          <h3>Weekly Mission</h3>
+          <p>Your default home screen is never a curriculum. It's one case (15 min) + one concept (10 min) + one action
+            (5 min). Completable in a Tuesday evening. No streak pressure.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Simulation Engine — No AI Zone</h3>
+          <p>India-contextualised case simulations (Swiggy, CRED, Razorpay, Zepto) in conditions that mirror real GCC
+            and mid-size PM interviews. No AI assistance available during sessions — because interviews don't allow it.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Directional Feedback</h3>
+          <p>Every simulation ends with 4 specific statements: what you did well, where your thinking broke down, why it
+            matters for your specific role type, and exactly what to do in the next session.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Readiness Signal — 3 States Only</h3>
+          <p>Performance-based, not completion-based. Building → Getting Close → Ready. When you're Ready, you get a
+            time-bounded instruction: "Apply to 3–5 roles this week." No percentages. No perfectionism loops.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT THIS IS NOT -->
+  <section>
+    <div class="container-narrow">
+      <span class="section-label">What PMReady Is NOT</span>
+      <h2 style="margin-bottom:var(--space-8)">Some design decisions are constraints, not features.</h2>
+      <div class="anti-list">
+        <div class="anti-item">
+          <span class="anti-icon">🚫</span>
+          <p><strong>No content feeds or course modules.</strong> You have 73 bookmarks and 4 half-finished courses.
+            More content is not what you need. A directed action is.</p>
+        </div>
+        <div class="anti-item">
+          <span class="anti-icon">🚫</span>
+          <p><strong>No streaks, no badges, no leaderboards.</strong> You're a working professional with irregular
+            hours. Missed Tuesday ≠ failure. Streak mechanics punish the most dedicated users.</p>
+        </div>
+        <div class="anti-item">
+          <span class="anti-icon">🚫</span>
+          <p><strong>No percentage readiness scores.</strong> "78% ready" creates a permanent focus on the 18%. Three
+            states only — Building, Getting Close, Ready — so perfectionism has nowhere to hide.</p>
+        </div>
+        <div class="anti-item">
+          <span class="anti-icon">🚫</span>
+          <p><strong>No paywall before first simulation.</strong> You've already paid for 3 platforms you didn't finish.
+            This product earns your trust before asking for payment.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section>
+    <div class="container-narrow text-center">
+      <div class="card card-glow" style="padding:var(--space-12);">
+        <div style="font-size:2.5rem; margin-bottom:var(--space-4);">🎯</div>
+        <h2 style="margin-bottom:var(--space-4);">Find out where you actually stand.</h2>
+        <p style="margin-bottom:var(--space-8); font-size:1.05rem;">
+          10 minutes. Your background. Your target role. Your honest starting point.
+          No generic roadmap. No app download. Just clarity.
+        </p>
+        <button onclick="openProfileModal()" class="btn btn-primary btn-lg" id="bottom-cta">
+          Start State Detection — Free →
+        </button>
+        <p style="margin-top:var(--space-4); font-size:0.8rem; color:var(--text-muted);">
+          No account required. First simulation + feedback is always free.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Profile / Resume Modal ───────────────────────── -->
+  <div class="modal-backdrop" id="profile-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-box">
+
+      <div class="modal-header">
+        <div>
+          <div class="modal-accuracy-badge">✨ Optional — Improves Calibration Accuracy</div>
+          <h2 id="modal-title" style="font-size:1.3rem; margin-bottom:var(--space-2);">Tell us a bit about yourself</h2>
+          <p style="font-size:0.875rem; color:var(--text-secondary); line-height:1.6;">
+            Adding your resume details helps us calibrate your archetype more precisely —
+            especially for gap analysis and feedback tone. Takes 2 minutes.
+            <strong style="color:var(--text-primary);">Completely optional.</strong>
+          </p>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal()" aria-label="Close profile form">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="profile-form" onsubmit="submitProfile(event)" novalidate>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="pf-name">Full Name <span class="optional">(optional)</span></label>
+              <input class="form-input" type="text" id="pf-name" placeholder="e.g. Priya Sharma" autocomplete="name">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pf-email">Email <span class="optional">(optional)</span></label>
+              <input class="form-input" type="email" id="pf-email" placeholder="you@example.com" autocomplete="email">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="pf-role">Current Job Title</label>
+              <input class="form-input" type="text" id="pf-role" placeholder="e.g. Software Engineer, Business Analyst">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pf-yoe">Years of Experience</label>
+              <select class="form-input" id="pf-yoe">
+                <option value="">Select range</option>
+                <option value="0-1">0 – 1 year</option>
+                <option value="1-3">1 – 3 years</option>
+                <option value="3-5">3 – 5 years</option>
+                <option value="5-8">5 – 8 years</option>
+                <option value="8+">8+ years</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pf-company">Current / Most Recent Company <span
+                class="optional">(optional)</span></label>
+            <input class="form-input" type="text" id="pf-company" placeholder="e.g. Infosys, TCS, a B2B SaaS startup">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pf-linkedin">LinkedIn Profile URL <span
+                class="optional">(optional)</span></label>
+            <input class="form-input" type="url" id="pf-linkedin" placeholder="https://linkedin.com/in/yourprofile">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pf-summary">Brief Background Summary <span
+                class="optional">(optional)</span></label>
+            <textarea class="form-input" id="pf-summary"
+              placeholder="2–3 lines about your current role, what you work on, and why you want to move into PM. This helps calibrate the feedback engine to your specific context."></textarea>
+          </div>
+
+          <div
+            style="background:rgba(124,58,237,0.07); border:1px solid rgba(124,58,237,0.2); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); margin-top:var(--space-2);">
+            <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.6;">
+              🔒 <strong style="color:var(--text-secondary);">Stored locally only.</strong>
+              This information is saved in your browser and never sent to any server.
+              It is used only to personalise your feedback and starting point card.
+            </p>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary w-full" style="justify-content:center;" onclick="submitProfile()">
+          Save &amp; Start Assessment →
+        </button>
+        <div class="modal-skip-row">
+          <span class="skip-note">Don't want to fill this?</span>
+          <button type="button" class="skip-link" onclick="skipProfile()">
+            Skip — Go straight to the quiz
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p><strong class="gradient-text">PMReady</strong> — India PM Career Navigation Platform</p>
+      <p style="margin-top:var(--space-2);">Built on: Primary research (n=11) · Secondary research (90+ sources, 15
+        validated hypotheses) · IPL Hiring Trends 2025 · Naukri JobSpeak · Zinnov GCC Report 2025</p>
+    </div>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script type="module">
+    // ── Restore state if already completed assessment ─────
+    const state = await loadState();
+    
+    if (state.archetype) {
+      const navCta = document.getElementById('nav-cta');
+      if (navCta) {
+        navCta.textContent = 'Continue My Journey →';
+        navCta.onclick = () => { window.location.href = 'dashboard.html'; };
+      }
+
+      const heroCta = document.getElementById('hero-cta');
+      if (heroCta) {
+        heroCta.textContent = 'Continue My Journey →';
+        heroCta.onclick = () => { window.location.href = 'dashboard.html'; };
+      }
+
+      const bottomCta = document.getElementById('bottom-cta');
+      if (bottomCta) {
+        bottomCta.textContent = 'Open My Dashboard →';
+        bottomCta.onclick = () => { window.location.href = 'dashboard.html'; };
+      }
+    }
+
+    // Modal state functions must be attached to window since we are now in an ES module scope
+    window.openProfileModal = function() {
+      const saved = JSON.parse(localStorage.getItem('pmready_profile') || '{}');
+      if (saved.name) document.getElementById('pf-name').value = saved.name;
+      if (saved.email) document.getElementById('pf-email').value = saved.email;
+      if (saved.role) document.getElementById('pf-role').value = saved.role;
+      if (saved.yoe) document.getElementById('pf-yoe').value = saved.yoe;
+      if (saved.company) document.getElementById('pf-company').value = saved.company;
+      if (saved.linkedin) document.getElementById('pf-linkedin').value = saved.linkedin;
+      if (saved.summary) document.getElementById('pf-summary').value = saved.summary;
+
+      document.getElementById('profile-modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      // Focus first input
+      setTimeout(() => document.getElementById('pf-name').focus(), 150);
+    }
+
+    window.closeModal = function() {
+      document.getElementById('profile-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    window.submitProfile = function(event) {
+      if (event) event.preventDefault();
+      const profile = {
+        name: document.getElementById('pf-name').value.trim(),
+        email: document.getElementById('pf-email').value.trim(),
+        role: document.getElementById('pf-role').value.trim(),
+        yoe: document.getElementById('pf-yoe').value,
+        company: document.getElementById('pf-company').value.trim(),
+        linkedin: document.getElementById('pf-linkedin').value.trim(),
+        summary: document.getElementById('pf-summary').value.trim(),
+        savedAt: Date.now()
+      };
+      localStorage.setItem('pmready_profile', JSON.stringify(profile));
+      window.location.href = 'detect.html';
+    }
+
+    window.skipProfile = function() {
+      // Mark as skipped so we don't ask again this session
+      localStorage.setItem('pmready_profile', JSON.stringify({ skipped: true, savedAt: Date.now() }));
+      window.location.href = 'detect.html';
+    }
+
+    // Close on backdrop click
+    document.getElementById('profile-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeModal();
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
+</body>
+
+</html>

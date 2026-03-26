@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Starting Point Card — PMReady</title>
+  <meta name="description" content="Your personalised PM archetype, starting point, and Week 1 mission.">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .results-page { padding: var(--space-10) 0 var(--space-20); }
+    .confetti-header { text-align: center; padding: var(--space-8) 0 var(--space-4); }
+    .salary-pill {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);
+      border-radius: var(--radius-full); font-size: 0.875rem; color: var(--green-400); font-weight: 600;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+    @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: var(--space-5);
+    }
+    .mini-card h4 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: var(--space-3); }
+    .week1-card {
+      background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(6,182,212,0.06));
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-xl); overflow: hidden; margin-top: var(--space-6);
+    }
+    .week1-header {
+      background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(6,182,212,0.08));
+      padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--border);
+    }
+    .week1-item {
+      display: flex; align-items: flex-start; gap: var(--space-4);
+      padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border);
+    }
+    .week1-item:last-child { border-bottom: none; }
+    .week1-icon {
+      width: 38px; height: 38px; border-radius: 8px;
+      background: rgba(124,58,237,0.15); display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .week1-type { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-weight: 700; }
+    .week1-title { font-weight: 600; font-size: 0.95rem; margin: 2px 0; }
+    .week1-time { font-size: 0.8rem; color: var(--text-muted); }
+    .secondary-card {
+      background: rgba(6,182,212,0.05); border: 1px solid rgba(6,182,212,0.15);
+      border-radius: var(--radius-md); padding: var(--space-4) var(--space-5); margin-top: var(--space-4);
+    }
+    .secondary-card p { font-size: 0.875rem; color: var(--text-secondary); }
+    .action-row { display: flex; gap: var(--space-4); flex-wrap: wrap; align-items: center; justify-content: center; margin-top: var(--space-10); }
+    .trust-note { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: var(--space-4); }
+  </style>
+</head>
+<body>
+
+  <!-- SIMPLE NAV -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">PM<span>Ready</span></a>
+      <span class="badge badge-purple">✓ Assessment Complete</span>
+    </div>
+  </nav>
+
+  <main class="results-page" id="results-content">
+    <div class="container-narrow">
+      <!-- Loading state -->
+      <div class="text-center" id="loading-state">
+        <div style="font-size:3rem; margin-bottom:var(--space-4);">⚡</div>
+        <h2>Analysing your profile…</h2>
+        <p>Mapping your background to India's PM archetypes.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script type="module">
+    // ── Load State ─────────────────────────────────────
+    const state = await loadState();
+
+    if (!state.archetype) {
+      window.location.href = 'detect.html';
+    } else {
+      // Short delay for effect
+      setTimeout(renderResults, 600);
+    }
+
+    window.renderResults = function() {
+      const archetype = ARCHETYPES[state.archetype];
+      const secondary = ARCHETYPES[state.secondaryArchetype];
+      const bg = BACKGROUNDS[state.background] || BACKGROUNDS['engineer'];
+      const mission = MISSIONS[state.archetype] || MISSIONS['growth_pm'];
+      const needsValidation = bg.needsValidation;
+
+      document.getElementById('results-content').innerHTML = `
+        <div class="container-narrow">
+
+          <!-- Confetti header -->
+          <div class="confetti-header">
+            <div style="font-size:3.5rem; margin-bottom:var(--space-4);">${archetype.emoji}</div>
+            <div class="archetype-badge">${archetype.emoji} Your PM Archetype</div>
+            <h1 style="font-size:clamp(2rem,5vw,3rem); margin-bottom:var(--space-3);">${archetype.name}</h1>
+            <p style="font-size:1.05rem; max-width:500px; margin:0 auto var(--space-4);">${archetype.tagline}</p>
+            <span class="salary-pill">💰 ${archetype.salaryRange} in India</span>
+          </div>
+
+          <!-- Starting Point Card -->
+          <div class="starting-card" role="region" aria-label="Your Starting Point Card">
+
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-5);">
+              <h2 style="font-size:1.25rem;">Your Starting Point Card</h2>
+              <div class="readiness-signal state-building">🔵 Building</div>
+            </div>
+
+            ${needsValidation ? `
+              <!-- Validation first — for QA / Ops / Support / Switcher -->
+              <div class="validation-box" role="note" aria-label="Background validation">
+                <span class="label">🌟 Your Advantage First</span>
+                <p>${bg.validationStatement}</p>
+              </div>
+            ` : ''}
+
+            <!-- False belief -->
+            <div class="false-belief-box" role="note" aria-label="Common misconception">
+              <span class="label">⚠️ The Common Misconception at Your Stage</span>
+              <p><em>"${bg.falsebelief}"</em></p>
+              ${bg.platformResponse ? `<p style="margin-top:var(--space-3); color:var(--text-primary); font-weight:500;">${bg.platformResponse}</p>` : ''}
+            </div>
+
+            <!-- Strengths and Gaps -->
+            <div class="two-col" style="margin-top:var(--space-5);">
+              <div class="mini-card">
+                <h4>✅ Your Strengths</h4>
+                <div class="gap-tags">
+                  ${archetype.strengths.map(s => `<span class="strength-tag">${s}</span>`).join('')}
+                </div>
+              </div>
+              <div class="mini-card">
+                <h4>🎯 Gaps to Close</h4>
+                <div class="gap-tags">
+                  ${archetype.gaps.map(g => `<span class="gap-tag">${g}</span>`).join('')}
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <p style="margin-top:var(--space-5); font-size:0.95rem; color:var(--text-secondary);">${archetype.description}</p>
+
+            <!-- Target companies -->
+            <div class="mini-card" style="margin-top:var(--space-4);">
+              <h4>🏢 Target Companies for Your Archetype</h4>
+              <p style="font-size:0.9rem; color:var(--text-primary);">${archetype.targetCompanies}</p>
+              <p style="font-size:0.8rem; color:var(--text-muted); margin-top:var(--space-1);">${archetype.companyType}</p>
+            </div>
+
+            <!-- Secondary archetype -->
+            <div class="secondary-card">
+              <p><strong style="color:var(--cyan-500);">Secondary fit:</strong> ${secondary.emoji} ${secondary.name} — ${secondary.tagline}</p>
+              <p style="margin-top:var(--space-2); font-size:0.8rem; color:var(--text-muted);">Salary range: ${secondary.salaryRange}</p>
+            </div>
+
+          </div>
+
+          <!-- Week 1 Mission Preview -->
+          <div class="week1-card" role="region" aria-label="Week 1 Mission">
+            <div class="week1-header">
+              <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--purple-400); margin-bottom:var(--space-2);">📋 Your Week 1 Mission</div>
+              <h3 style="font-size:1.1rem;">${mission.title}</h3>
+              ${mission.case.leadsWithStrength ? `<p style="font-size:0.8rem; color:var(--green-400); margin-top:var(--space-2);">✓ ${mission.case.strengthNote}</p>` : ''}
+            </div>
+            <div class="week1-item">
+              <div class="week1-icon">📋</div>
+              <div>
+                <div class="week1-type">Case Simulation · ${mission.case.format}</div>
+                <div class="week1-title">${mission.case.title}</div>
+                <div class="week1-time">⏱ ${mission.case.duration}</div>
+              </div>
+            </div>
+            <div class="week1-item">
+              <div class="week1-icon">📖</div>
+              <div>
+                <div class="week1-type">Concept Close</div>
+                <div class="week1-title">${mission.concept.title}</div>
+                <div class="week1-time">⏱ ${mission.concept.duration}</div>
+              </div>
+            </div>
+            <div class="week1-item">
+              <div class="week1-icon">✍️</div>
+              <div>
+                <div class="week1-type">Application Action</div>
+                <div class="week1-title">${mission.action.title}</div>
+                <div class="week1-time">⏱ ${mission.action.duration}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CTA Buttons -->
+          <div class="action-row">
+            <a href="dashboard.html" class="btn btn-primary btn-lg" id="go-dashboard">
+              Open My Dashboard →
+            </a>
+            <a href="simulate.html" class="btn btn-secondary btn-lg" id="start-sim">
+              Start First Simulation →
+            </a>
+          </div>
+          <p class="trust-note">Your progress is saved automatically. No account needed.</p>
+
+          <!-- Shareable PM Fit Card -->
+          <div style="margin-top:var(--space-10); background:rgba(124,58,237,0.06); border:1px solid rgba(124,58,237,0.2); border-radius:var(--radius-lg); padding:var(--space-6); text-align:center;">
+            <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--purple-400); margin-bottom:var(--space-3);">📸 Share Your PM Fit</div>
+            <h3 style="margin-bottom:var(--space-2);">Show the world your PM archetype</h3>
+            <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:var(--space-5);">Download your PM Fit Card and share it on LinkedIn to signal your preparation journey.</p>
+            <canvas id="pm-fit-canvas" width="600" height="320" style="border-radius:12px; max-width:100%; display:block; margin:0 auto var(--space-5);" aria-label="PM Fit Card preview"></canvas>
+            <div style="display:flex; gap:var(--space-3); justify-content:center; flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="downloadCard()" id="download-card-btn">⬇ Download PM Fit Card</button>
+              <button class="btn btn-secondary" onclick="shareLinkedIn()" id="share-linkedin-btn">🔗 Share on LinkedIn</button>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      // Draw the PM Fit Card after render
+      requestAnimationFrame(() => drawCard(archetype));
+    }
+
+    // ── Canvas PM Fit Card ────────────────────────────────
+    window.drawCard = async function(archetype) {
+      const canvas = document.getElementById('pm-fit-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = 600, H = 320;
+
+      // Background gradient
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0, '#0e0e23');
+      grad.addColorStop(1, '#1a1030');
+      ctx.fillStyle = grad;
+      ctx.roundRect(0, 0, W, H, 16);
+      ctx.fill();
+
+      // Purple glow
+      const glow = ctx.createRadialGradient(W*0.15, H*0.5, 0, W*0.15, H*0.5, 200);
+      glow.addColorStop(0, 'rgba(124,58,237,0.18)');
+      glow.addColorStop(1, 'rgba(124,58,237,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      // Border
+      ctx.strokeStyle = 'rgba(124,58,237,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.roundRect(1, 1, W-2, H-2, 15);
+      ctx.stroke();
+
+      // Emoji
+      ctx.font = '56px serif';
+      ctx.fillText(archetype.emoji, 36, 88);
+
+      // PMReady badge
+      ctx.fillStyle = 'rgba(124,58,237,0.15)';
+      ctx.roundRect(36, 104, 105, 22, 11);
+      ctx.fill();
+      ctx.fillStyle = '#a78bfa';
+      ctx.font = 'bold 11px -apple-system, sans-serif';
+      ctx.fillText('Assessed by PMReady', 44, 119);
+
+      // Archetype name
+      ctx.fillStyle = '#f5f5ff';
+      ctx.font = 'bold 28px -apple-system, sans-serif';
+      ctx.fillText(archetype.name, 36, 176);
+
+      // Tagline
+      ctx.fillStyle = '#96969e';
+      ctx.font = '14px -apple-system, sans-serif';
+      ctx.fillText(archetype.tagline, 36, 202);
+
+      // Salary
+      ctx.fillStyle = '#8b5cf6';
+      ctx.font = 'bold 13px -apple-system, sans-serif';
+      ctx.fillText('India Salary Range', 36, 240);
+      ctx.fillStyle = '#e0e0ef';
+      ctx.font = 'bold 20px -apple-system, sans-serif';
+      ctx.fillText(archetype.salaryRange, 36, 268);
+
+      // Readiness state
+      const state = await loadState();
+      const readiness = computeReadiness(state);
+      const rsMap = { building: { label: '🔵 Building', col: '#60a5fa' }, getting_close: { label: '🟡 Getting Close', col: '#fbbf24' }, ready: { label: '🟢 Ready', col: '#34d399' } };
+      const rs = rsMap[readiness] || rsMap.building;
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.roundRect(W-200, H-64, 164, 36, 8);
+      ctx.fill();
+      ctx.fillStyle = rs.col;
+      ctx.font = 'bold 14px -apple-system, sans-serif';
+      ctx.fillText(rs.label, W-188, H-40);
+
+      // pmready.in watermark
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.font = '12px -apple-system, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('pmready.in', W-20, 24);
+      ctx.textAlign = 'left';
+
+      // 🇮🇳 flag (flag emoji as text)
+      ctx.font = '16px serif';
+      ctx.fillText('🇮🇳 India', W-188, H-14);
+    }
+
+    window.downloadCard = function() {
+      const canvas = document.getElementById('pm-fit-canvas');
+      const link = document.createElement('a');
+      link.download = 'my-pm-fit-card.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    window.shareLinkedIn = async function() {
+      const state = await loadState();
+      const archetype = ARCHETYPES[state.archetype] || ARCHETYPES['growth_pm'];
+      const text = encodeURIComponent(`I just found my PM Archetype — ${archetype.emoji} ${archetype.name}!\n\n${archetype.tagline}\n\nAssessed by PMReady 🇮🇳 — India's PM career navigation platform.\n\nCheck it out: https://pmready.in`);
+      window.open(`https://www.linkedin.com/sharing/share-offsite/?summary=${text}`, '_blank', 'noopener,noreferrer');
+    }
+  </script>
+</body>
+</html>
+
