@@ -1375,28 +1375,89 @@ const READINESS_STATES = {
   }
 };
 
-// ── State Persistence Helpers ─────────────────────────────
-const STATE_KEY = 'pmready_state';
+// ── State Persistence Helpers (Supabase) ─────────────────────────────
+const LOCAL_SESSION_KEY = 'pmready_session_id';
 
-function saveState(updates) {
-  const current = loadState();
-  const next = { ...current, ...updates, updatedAt: Date.now() };
-  localStorage.setItem(STATE_KEY, JSON.stringify(next));
+function getSessionId() {
+  let sid = localStorage.getItem(LOCAL_SESSION_KEY);
+  if (!sid) {
+    sid = 'anon_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem(LOCAL_SESSION_KEY, sid);
+  }
+  return sid;
+}
+
+window._pmready_state_cache = {};
+
+async function saveState(updates) {
+  const current = await loadState();
+  const next = { ...current, ...updates, updatedAt: new Date().toISOString() };
+  window._pmready_state_cache = next;
+
+  try {
+    const { supabase } = await import('./supabaseClient.js');
+    const sid = getSessionId();
+
+    const dbRow = {
+      session_id: sid,
+      archetype: next.archetype,
+      background: next.background,
+      secondaryArchetype: next.secondaryArchetype,
+      readiness_state: next.readinessState || 'building',
+      sim_completed: next.simCompleted || 0,
+      week_number: next.weekNumber || 1,
+      completed_cases: next.completedCases || [],
+      action_response: next.actionResponse || '',
+      avg_score: next.avgScore || 0,
+    };
+
+    await supabase.from('profiles').upsert(dbRow, { onConflict: 'session_id' });
+  } catch (err) { }
   return next;
 }
 
-function loadState() {
+async function loadState() {
   try {
-    const raw = localStorage.getItem(STATE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
+    const { supabase } = await import('./supabaseClient.js');
+    const sid = getSessionId();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('session_id', sid)
+      .single();
+
+    if (error || !data) return window._pmready_state_cache;
+
+    const next = {
+      archetype: data.archetype,
+      background: data.background,
+      secondaryArchetype: data.secondaryArchetype,
+      readinessState: data.readiness_state,
+      simCompleted: data.sim_completed,
+      weekNumber: data.week_number,
+      completedCases: data.completed_cases || [],
+      actionResponse: data.action_response,
+      avgScore: data.avg_score
+    };
+    window._pmready_state_cache = next;
+    return next;
+  } catch (err) {
+    return window._pmready_state_cache;
+  }
 }
 
-function clearState() {
-  localStorage.removeItem(STATE_KEY);
+async function clearState() {
+  try {
+    const { supabase } = await import('./supabaseClient.js');
+    const sid = getSessionId();
+    await supabase.from('profiles').delete().eq('session_id', sid);
+  } catch (err) { }
+  localStorage.removeItem(LOCAL_SESSION_KEY);
+  localStorage.removeItem('pmready_profile');
+  window._pmready_state_cache = {};
 }
 
-// Readiness thresholds (sessions completed)
+// Readiness thresholds
 function computeReadiness(state) {
   const completed = state.simCompleted || 0;
   const score = state.avgScore || 0;
@@ -1404,3 +1465,23 @@ function computeReadiness(state) {
   if (completed >= 2 && score >= 60) return 'getting_close';
   return 'building';
 }
+
+// ── Expose Global Data to ES Modules ──────────────────────────────
+Object.assign(window, {
+  ARCHETYPES,
+  BACKGROUNDS,
+  CASES,
+  QUIZ_QUESTIONS,
+  RUBRIC_DIMENSIONS,
+  CONCEPT_CARDS,
+  MISSIONS,
+  READINESS_STATES,
+  PAYWALL_CONFIG,
+  saveState,
+  loadState,
+  clearState,
+  computeReadiness,
+  computeRubricScore,
+  calculateArchetype,
+  getExperienceLevel
+});
