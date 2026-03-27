@@ -87,8 +87,9 @@
     </div>
   </main>
 
-  <script type="module" src="js/data.js"></script>
   <script type="module">
+    import { loadState, ARCHETYPES, MISSIONS, computeReadiness, READINESS_STATES, BACKGROUNDS, saveState, clearState, CONCEPT_CARDS } from './js/data.js';
+
     const state = await loadState();
 
     if (!state.archetype) {

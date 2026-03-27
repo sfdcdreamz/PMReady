@@ -103,8 +103,9 @@
 
   </div>
 
-  <script type="module" src="js/data.js"></script>
   <script type="module">
+    import { QUIZ_QUESTIONS, calculateArchetype, getExperienceLevel, saveState } from './js/data.js';
+
     // ── State ─────────────────────────────────────────────
     window.answers = {};
     window.currentStep = 0;

@@ -134,8 +134,9 @@
     </div>
   </div>
 
-  <script type="module" src="js/data.js"></script>
   <script type="module">
+    import { loadState, CASES, PAYWALL_CONFIG, saveState, computeRubricScore } from './js/data.js';
+
     // ── Init & Render ─────────────────────────────────────────
     const state = await loadState();
     let activeCase = null;

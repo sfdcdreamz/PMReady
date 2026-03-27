@@ -1439,7 +1439,7 @@ async function loadState() {
       .from('profiles')
       .select('*')
       .eq('session_id', sid)
-      .single();
+      .maybeSingle(); // Changed from .single() to avoid 406 error on new users
 
     if (error || !data) {
       window._pmready_state_cache = localState;
@@ -1488,6 +1488,26 @@ function computeReadiness(state) {
 }
 
 // ── Expose Global Data to ES Modules ──────────────────────────────
+export {
+  ARCHETYPES,
+  BACKGROUNDS,
+  CASES,
+  QUIZ_QUESTIONS,
+  RUBRIC_DIMENSIONS,
+  CONCEPT_CARDS,
+  MISSIONS,
+  READINESS_STATES,
+  PAYWALL_CONFIG,
+  saveState,
+  loadState,
+  clearState,
+  computeReadiness,
+  computeRubricScore,
+  calculateArchetype,
+  getExperienceLevel
+};
+
+// Also expose globally for non-module script compatibility in detect.html
 Object.assign(window, {
   ARCHETYPES,
   BACKGROUNDS,

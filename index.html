@@ -727,8 +727,9 @@
     </div>
   </footer>
 
-  <script type="module" src="js/data.js"></script>
   <script type="module">
+    import { loadState, clearState } from './js/data.js';
+
     // ── Restore state if already completed assessment ─────
     const state = await loadState();
     

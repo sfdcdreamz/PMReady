@@ -68,8 +68,9 @@
     </div>
   </main>
 
-  <script type="module" src="js/data.js"></script>
   <script type="module">
+    import { loadState, ARCHETYPES, BACKGROUNDS, CASES, FEEDBACK_TEMPLATES, computeReadiness, saveState, READINESS_STATES, RUBRIC_DIMENSIONS } from './js/data.js';
+
     const state = await loadState();
     
     if (!state.lastScore || !state.lastCaseId) {
