@@ -733,6 +733,8 @@
     const state = await loadState();
     
     if (state.archetype) {
+      // The CTA override is disabled so you can openly test the assessment from scratch
+      /*
       const navCta = document.getElementById('nav-cta');
       if (navCta) {
         navCta.textContent = 'Continue My Journey →';
@@ -750,6 +752,7 @@
         bottomCta.textContent = 'Open My Dashboard →';
         bottomCta.onclick = () => { window.location.href = 'dashboard.html'; };
       }
+      */
     }
 
     // Modal state functions must be attached to window since we are now in an ES module scope
