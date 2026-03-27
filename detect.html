@@ -283,7 +283,16 @@
       }
     });
 
-    // Init
+    // Init - Shuffle situational questions options
+    QUIZ_QUESTIONS.forEach(q => {
+      if (q.id !== 'q1' && q.id !== 'q3' && q.id !== 'q7') {
+        const pinned = q.options.filter(o => o.value === 'nothing' || o.value === 'unsure' || o.value === 'open');
+        const shuffleables = q.options.filter(o => o.value !== 'nothing' && o.value !== 'unsure' && o.value !== 'open');
+        shuffleables.sort(() => Math.random() - 0.5);
+        q.options = [...shuffleables, ...pinned];
+      }
+    });
+
     renderQuiz();
   </script>
 </body>

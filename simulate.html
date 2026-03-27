@@ -43,6 +43,16 @@
       font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
       color: var(--purple-400); margin-bottom: var(--space-3); display: block;
     }
+    .week-section { margin-top: var(--space-8); }
+    .week-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: var(--space-4); border-bottom: 1px solid var(--border);
+      padding-bottom: var(--space-2);
+    }
+    .week-title { font-size: 1.25rem; font-weight: 700; }
+    .week-status { font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full); }
+    .week-unlocked { background: rgba(16,185,129,0.1); color: var(--green-400); }
+    .week-locked { background: rgba(239,68,68,0.1); color: var(--red-400); }
     .no-ai-zone-banner {
       display: flex; align-items: center; gap: var(--space-3);
       background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
@@ -67,12 +77,12 @@
   <div id="select-view" style="display:none;">
     <div class="sim-body">
       <div class="container-narrow">
-        <div style="margin-bottom:var(--space-8);">
+        <div style="margin-bottom:var(--space-6);">
           <span style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--purple-400); display:block; margin-bottom:var(--space-3);">Choose Your Simulation</span>
           <h1 style="font-size:1.75rem; margin-bottom:var(--space-2);">Select a Case</h1>
-          <p style="color:var(--text-secondary);">Each case is tagged to your archetype. Start with Format A or B — Format C comes in Week 3.</p>
+          <p style="color:var(--text-secondary);">Simulations are unlocked sequentially. Complete at least one case in Week 1 to unlock Week 2.</p>
         </div>
-        <div class="case-select-grid" id="case-select-grid"></div>
+        <div id="case-select-grid"></div>
       </div>
     </div>
   </div>
@@ -148,7 +158,6 @@
       showCaseSelector();
     }
 
-    // ── Case Selector ─────────────────────────────────────
     function showCaseSelector() {
       if (!state.archetype) {
         window.location.href = 'detect.html';
@@ -160,31 +169,81 @@
       const archetype = state.archetype || 'growth_pm';
       const grid = document.getElementById('case-select-grid');
       const caseList = Object.values(CASES);
+      
       const relevant = caseList.filter(c => c.targetArchetypes.includes(archetype));
       const others   = caseList.filter(c => !c.targetArchetypes.includes(archetype));
       const sorted   = [...relevant, ...others];
-      grid.innerHTML = sorted.map(c => {
-        const isDone = (state.completedCases || []).includes(c.id);
-        const isRecommended = c.targetArchetypes.includes(archetype);
-        const isLocked = PAYWALL_CONFIG.enabled && c.week && !PAYWALL_CONFIG.freeWeeks.includes(c.week) && !state.isMember;
-        return `
-          <a href="${isLocked ? '#' : 'simulate.html?case=' + c.id}"
-             class="case-select-card${isLocked ? ' locked-card' : ''}"
-             aria-label="${isLocked ? 'Locked: ' : 'Start: '}${c.title}"
-             ${isLocked ? 'onclick="showPaywall(event)"' : ''}>
-            <span class="case-format-badge">
-              ${isLocked ? '🔒 Founding Member · ' : isRecommended ? '⭐ Recommended · ' : ''}
-              ${c.format === 'format_a' ? 'Format A — Product Diagnosis' : 'Format B — Build or Kill'}
-              ${c.week ? ` · Week ${c.week}` : ''}
-            </span>
-            <h3 style="font-size:1rem; margin-bottom:var(--space-2);">${c.title}</h3>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:var(--space-3);">${c.company} · ⏱ 15 min · ${c.difficulty}</p>
-            <div style="display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-3);">
-              ${c.primarySkills.map(s => `<span class="badge badge-purple" style="font-size:0.65rem;">${s.replace(/_/g,' ')}</span>`).join('')}
+
+      const hasCompletedWeek1 = (state.completedCases || []).some(id => CASES[id] && (CASES[id].week || 1) === 1);
+
+      const weekGroups = { 1: [], 2: [], 3: [] };
+      sorted.forEach(c => {
+        const w = c.week || 1;
+        if (weekGroups[w]) weekGroups[w].push(c);
+      });
+
+      // Shuffle cases within each week to generate random selection for fresh feel
+      Object.keys(weekGroups).forEach(w => {
+        weekGroups[w].sort(() => Math.random() - 0.5);
+      });
+
+      let html = '';
+      [1, 2, 3].forEach(week => {
+        if (weekGroups[week].length === 0) return;
+        
+        let isSeqLocked = false;
+        if (week === 2 && !hasCompletedWeek1) isSeqLocked = true;
+        if (week === 3 && !hasCompletedWeek1) isSeqLocked = true; // or require week 2 done
+
+        const statusClass = isSeqLocked ? 'week-locked' : 'week-unlocked';
+        const statusText = isSeqLocked ? '🔒 Locked (Complete Week 1)' : '🟢 Unlocked';
+
+        html += `
+          <div class="week-section">
+            <div class="week-header">
+              <span class="week-title">Week ${week} — ${week === 1 ? 'Foundations' : week === 2 ? 'Advanced Scenarios' : 'Founding Member Cases'}</span>
+              <span class="week-status ${statusClass}">${statusText}</span>
             </div>
-            ${isDone ? `<span class="badge badge-green">✓ Completed</span>` : isLocked ? `<span class="badge badge-purple" style="opacity:0.7;">🔒 Week 3 — Founding Member</span>` : `<span class="badge badge-blue">Start →</span>`}
-          </a>`;
-      }).join('');
+            <div class="case-select-grid">
+        `;
+
+        html += weekGroups[week].map(c => {
+          const isDone = (state.completedCases || []).includes(c.id);
+          const isRecommended = c.targetArchetypes.includes(archetype);
+          
+          let isLocked = false;
+          let paywallLocked = false;
+          let lockReason = '';
+          
+          if (isSeqLocked) {
+            isLocked = true;
+            lockReason = '🔒 Complete Week 1 to Unlock';
+          } else if (PAYWALL_CONFIG.enabled && c.week && !PAYWALL_CONFIG.freeWeeks.includes(c.week) && !state.isMember) {
+            isLocked = true;
+            paywallLocked = true;
+            lockReason = '🔒 Founding Member Access';
+          }
+
+          return `
+            <a href="${isLocked ? '#' : 'simulate.html?case=' + c.id}"
+               class="case-select-card${isLocked ? ' locked-card' : ''}"
+               aria-label="${isLocked ? 'Locked: ' : 'Start: '}${c.title}"
+               ${paywallLocked ? 'onclick="showPaywall(event)"' : (isSeqLocked ? "onclick=\"alert('Complete at least one Week 1 case to unlock this week.'); return false;\"" : "")}>
+              <span class="case-format-badge">
+                ${isRecommended ? '⭐ Recommended · ' : ''}
+                ${c.format === 'format_a' ? 'Format A — Product Diagnosis' : 'Format B — Build or Kill'}
+              </span>
+              <h3 style="font-size:1rem; margin-bottom:var(--space-2);">${c.title}</h3>
+              <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:var(--space-3);">${c.company} · ⏱ 15 min · ${c.difficulty}</p>
+              <div style="display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-3);">
+                ${c.primarySkills.map(s => `<span class="badge badge-purple" style="font-size:0.65rem;">${s.replace(/_/g,' ')}</span>`).join('')}
+              </div>
+              ${isDone ? `<span class="badge badge-green">✓ Completed</span>` : isLocked ? `<span class="badge badge-purple" style="opacity:0.7;">${lockReason}</span>` : `<span class="badge badge-blue">Start →</span>`}
+            </a>`;
+        }).join('');
+        html += `</div></div>`;
+      });
+      grid.innerHTML = html;
     }
 
     // ── Paywall ───────────────────────────────────────────
