@@ -83,7 +83,7 @@
       window.location.href = 'detect.html';
     } else {
       // Short delay for effect
-      setTimeout(renderResults, 600);
+      setTimeout(() => window.renderResults(), 600);
     }
 
     window.renderResults = function() {
