@@ -1375,8 +1375,9 @@ const READINESS_STATES = {
   }
 };
 
-// ── State Persistence Helpers (Supabase) ─────────────────────────────
+// ── State Persistence Helpers (Supabase + Local Fallback) ─────────────────────────────
 const LOCAL_SESSION_KEY = 'pmready_session_id';
+const STATE_KEY = 'pmready_state';
 
 function getSessionId() {
   let sid = localStorage.getItem(LOCAL_SESSION_KEY);
@@ -1387,12 +1388,15 @@ function getSessionId() {
   return sid;
 }
 
-window._pmready_state_cache = {};
+window._pmready_state_cache = null;
 
 async function saveState(updates) {
   const current = await loadState();
   const next = { ...current, ...updates, updatedAt: new Date().toISOString() };
   window._pmready_state_cache = next;
+  
+  // ALways persist to localStorage as an immediate bulletproof fallback
+  localStorage.setItem(STATE_KEY, JSON.stringify(next));
 
   try {
     const { supabase } = await import('./supabaseClient.js');
@@ -1412,11 +1416,22 @@ async function saveState(updates) {
     };
 
     await supabase.from('profiles').upsert(dbRow, { onConflict: 'session_id' });
-  } catch (err) { }
+  } catch (err) { console.warn('Supabase sync failed, relying on localStorage.'); }
   return next;
 }
 
 async function loadState() {
+  // 1. Memory Cache
+  if (window._pmready_state_cache) return window._pmready_state_cache;
+
+  // 2. LocalStorage Cache (Synchronous & Bulletproof)
+  let localState = {};
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (raw) localState = JSON.parse(raw);
+  } catch (err) {}
+
+  // 3. Supabase authoritative fetch
   try {
     const { supabase } = await import('./supabaseClient.js');
     const sid = getSessionId();
@@ -1426,7 +1441,10 @@ async function loadState() {
       .eq('session_id', sid)
       .single();
 
-    if (error || !data) return window._pmready_state_cache;
+    if (error || !data) {
+      window._pmready_state_cache = localState;
+      return localState;
+    }
 
     const next = {
       archetype: data.archetype,
@@ -1440,9 +1458,12 @@ async function loadState() {
       avgScore: data.avg_score
     };
     window._pmready_state_cache = next;
+    // Keep local sync'd
+    localStorage.setItem(STATE_KEY, JSON.stringify(next));
     return next;
   } catch (err) {
-    return window._pmready_state_cache;
+    window._pmready_state_cache = localState;
+    return localState;
   }
 }
 
@@ -1453,8 +1474,8 @@ async function clearState() {
     await supabase.from('profiles').delete().eq('session_id', sid);
   } catch (err) { }
   localStorage.removeItem(LOCAL_SESSION_KEY);
-  localStorage.removeItem('pmready_profile');
-  window._pmready_state_cache = {};
+  localStorage.removeItem(STATE_KEY);
+  window._pmready_state_cache = null;
 }
 
 // Readiness thresholds
